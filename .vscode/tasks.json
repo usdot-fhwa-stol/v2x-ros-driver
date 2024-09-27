@@ -1,12 +1,11 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
+    // See https://go.microsoft.com/fwlink/?LinkId=733558 for the documentation about the tasks.json format
     "version": "2.0.0",
     "tasks": [
         {
             "label": "build",
             "type": "shell",
-            "command": "cp --chown=carma . /home/carma/src/ && ~/src/docker/install.sh && cp -r /home/carma/install /opt/carma/install && sudo chmod -R +x /opt/carma/install",
+            "command": "cp -r /workspace/* /home/carma/src/ && /home/carma/src/docker/install.sh && cp -r /home/carma/install /opt/carma/install && sudo chmod -R +x /opt/carma/install",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -28,6 +27,5 @@
                 "kind": "build"
             }
         }
-
     ]
 }

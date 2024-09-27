@@ -11,6 +11,8 @@
 #  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #  License for the specific language governing permissions and limitations under
 #  the License.
+
+# Image build
 ARG DOCKER_ORG="usdotfhwastoldev"
 ARG DOCKER_TAG="develop"
 FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} AS base_image
@@ -27,7 +29,8 @@ COPY --chown=carma . /home/carma/src/
 RUN ~/src/docker/checkout.bash -b ${GIT_BRANCH}
 RUN ~/src/docker/install.sh
 
-FROM setup
+# Final image
+FROM setup AS final
 
 ARG BUILD_DATE="NULL"
 ARG VERSION="NULL"
