@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - "develop"
+      - "develop-humble"
       - "master"
       - "release/*"
     tags:
