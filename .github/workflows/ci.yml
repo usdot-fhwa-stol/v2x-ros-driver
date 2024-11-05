@@ -3,7 +3,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
-    branches: 
+    branches:
       - develop
       - master
       - "release/*"
@@ -27,7 +27,7 @@ jobs:
       image: ${{ needs.determine_docker_org_and_tag.outputs.docker_organization }}/carma-base:${{ needs.determine_docker_org_and_tag.outputs.docker_image_tag }}
       env:
         INIT_ENV: "/home/carma/.base-image/init-env.sh"
-        ROS_2_ENV: "/opt/ros/foxy/setup.bash"
+        ROS_2_ENV: "/opt/ros/humble/setup.bash"
         TERM: xterm
       options: "--user root"
     steps:
