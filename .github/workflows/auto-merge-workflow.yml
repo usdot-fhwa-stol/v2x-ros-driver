@@ -7,7 +7,7 @@ on:
 
 jobs:
   call-merge-workflow:
-    uses: usdot-fhwa-stol/actions/.github/workflows/merge-develop-humble.yml@main
+    uses: usdot-fhwa-stol/actions/.github/workflows/auto-pr-merge.yml@main
     with:
       branch_from: develop
       branch_to: develop-humble
