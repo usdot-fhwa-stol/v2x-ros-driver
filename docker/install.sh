@@ -27,10 +27,10 @@ if [[ ! -z "$ROS2_PACKAGES" ]]; then
     colcon build \
     --packages-above $ROS2_PACKAGES \
     --parallel-workers $(nproc) \
-    --cmake-args -DCMAKE_BUILD_TYPE=Release \
+    --cmake-args -DCMAKE_BUILD_TYPE=Release
 else
     colcon build \
     --packages-up-to dsrc_driver \
     --parallel-workers $(nproc) \
-    --cmake-args -DCMAKE_BUILD_TYPE=Release \
+    --cmake-args -DCMAKE_BUILD_TYPE=Release
 fi

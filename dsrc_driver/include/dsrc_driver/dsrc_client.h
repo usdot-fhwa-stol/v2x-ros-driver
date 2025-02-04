@@ -123,7 +123,17 @@ public:
     /**
      * @brief set wave config path
     */
-   void set_wave_file_path(const std::string &path);
+    void set_wave_file_path(const std::string &path);
+
+    /**
+     * @brief Checks actual message vector size against size specified in MessageFrame
+     */
+    bool isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index);
+    
+    /**
+     * @brief Checks msg_id against psid list to make sure a WSA with valid PSID is not accidentally used instead of MessageFrame
+     */
+    bool isValidPSID(const std::string& msg_id);
 
 
 private:
@@ -134,6 +144,7 @@ private:
     std::shared_ptr<std::thread> io_thread_;
     volatile bool running_;
     std::vector<std::string> wave_cfg_dsrc_ids_;
+    std::vector<std::string> wave_cfg_psids_;
     std::string wave_file_path;
 
     //udp
@@ -143,7 +154,6 @@ private:
 
     int long_frame = 4;
     int short_frame = 3;
-    int wsa_data = 3;
     uint16_t msg_size;
     uint16_t msg_id_test;
 

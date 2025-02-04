@@ -185,85 +185,90 @@ void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& d
             std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.begin() + end_index);
 
             // Check if specified MessageFrame size matches actual data size
+            std::cerr << "msg_vec: " << msg_vec << std::endl;
             std::cerr << "msg_vec size: " << msg_vec.size() << std::endl;
-            if (msg_vec.size() > 255) {
-                start_index += long_frame;
-                std::vector<uint8_t> long_vec(entry.begin() + start_index, entry.begin() + end_index);
-                msg_size = (static_cast<uint16_t>(msg_vec[2]) << 8) | msg_vec[3];
-                std::cerr << "Frame size: " << std::to_string(msg_size) << std::endl;
-                if (msg_size == long_vec.size())
-                    {
-                        start_index += wsa_data;
-                    }
-                else {
-                    std::cerr << "Size in MessageFrame does not match actual data size!" << std::endl;
+            if (!isValidMsgSize(msg_vec, start_index, end_index))
+            {
+                continue;
+            }
+            else
+            {
+                if (!isValidPSID(msg_id))
+                {
+                    std::cerr << "Sending message vector: " << msg_vec << std::endl;
+                    onMessageReceived(msg_vec, msg_id);
+                    break;
+                }
+                else
+                {
                     continue;
                 }
             }
-            else {
-                start_index += short_frame;
-                std::vector<uint8_t> short_vec(entry.begin() + start_index, entry.begin() + end_index);
-                msg_size = msg_vec[2];
-                std::cerr << "Frame size: " << std::to_string(msg_size) << std::endl;
-                if (msg_size == short_vec.size())
-                    {
-                        start_index += wsa_data;
-                    }
-                else {
-                    std::cerr << "Size in MessageFrame does not match actual data size!" << std::endl;
-                    continue;
-                }
-            }
-
-            std::vector<uint8_t> vec_test(entry.begin() + start_index, entry.begin() + end_index);
-            msg_id_test = (static_cast<uint16_t>(vec_test[0]) << 8) | vec_test[1];
-            std::cerr << "Msg ID test: " << std::to_string(msg_id_test) << std::endl;
-            
-            if (!IsValidMsgID(std::to_string(msg_id_test))) {
-                onMessageReceived(msg_vec, msg_id);
-                std::cerr << "Sending original message vector." << std::endl;
-            }
-            else {
-                std::cerr << "vec_test size: " << vec_test.size() << std::endl;
-                if (vec_test.size() > 255) {
-                    start_index += long_frame;
-                    std::vector<uint8_t> fin_test(entry.begin() + start_index, entry.begin() + end_index);
-                    msg_size = (vec_test[2] << 8) | vec_test[3];
-                    std::cerr << "Test Frame size: " << std::to_string(msg_size) << std::endl;
-                    if (msg_size == fin_test.size()) {
-                        onMessageReceived(vec_test, msg_id_test);
-                        std::cerr << "Sending updated message vector." << std::endl;
-                    }
-                    else {
-                        onMessageReceived(msg_vec, msg_id);
-                        std::cerr << "Sending original message vector." << std::endl;
-                    }
-                }
-                else {
-                    start_index += short_frame;
-                    std::vector<uint8_t> fin_test(entry.begin() + start_index, entry.begin() + end_index);
-                    msg_size = vec_test[2];
-                    std::cerr << "Frame size: " << std::to_string(msg_size) << std::endl;
-                    if (msg_size == fin_test.size()){
-                        onMessageReceived(vec_test, msg_id_test);
-                        std::cerr << "Sending updated message vector." << std::endl;
-                    }
-                    else {
-                        onMessageReceived(msg_vec, msg_id);
-                        std::cerr << "Sending original message vector." << std::endl;
-                    }
-                }
-            }
-            break;
         }
     }
 }
 
+bool DSRCOBUClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index)
+{
+    if (msg_vec.size() > 255) 
+    {
+        auto tmp_start_index = start_index + long_frame;
+        std::vector<uint8_t> long_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
+        msg_size = (static_cast<uint16_t>(long_vec[2]) << 8) | long_vec[3];
+        std::cerr << "Frame size: " << std::to_string(msg_size) << std::endl;
+        if (msg_size == long_vec.size())
+            {
+                return true;
+            }
+        else 
+        {
+            std::cerr << "Size in possible MessageFrame does not match actual data size. Checking rest of data." << std::endl;
+            return false;
+        }
+    }
+    else 
+    {
+        auto tmp_start_index = start_index + short_frame;
+        std::vector<uint8_t> short_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
+        std::cerr << "short_vec: " << short_vec << std::endl;
+        std::cerr << "short_vec size: " << short_vec.size() << std::endl;
+        msg_size = short_vec[2];
+        std::cerr << "Frame size: " << std::to_string(msg_size) << std::endl;
+        if (msg_size == short_vec.size())
+            {
+                return true;
+            }
+        else {
+            std::cerr << "Size in possible MessageFrame does not match actual data size. Checking rest of data." << std::endl;
+            return false;
+        }
+    }
+}
+
+bool DSRCOBUClient::isValidPSID(const std::string &msg_id)
+{
+    if (this->wave_cfg_psids_.empty())
+    {
+        if (this->wave_file_path.size() == 0)
+        {
+            return false;
+        }
+        loadWaveConfigDsrcIds(this->wave_file_path);
+    }    
+
+    for (const auto &psid : this->wave_cfg_psids_) 
+    {
+        if (msg_id == psid)
+            return true;
+    }
+    return false;
+}
+
 bool DSRCOBUClient::IsValidMsgID(const std::string &msg_id)
 {
-    if(this->wave_cfg_dsrc_ids_.empty())
+    if (this->wave_cfg_dsrc_ids_.empty())
     {
-        if(this->wave_file_path.size() == 0)
+        if (this->wave_file_path.size() == 0)
         {
             return false;
         }
@@ -272,7 +277,7 @@ bool DSRCOBUClient::IsValidMsgID(const std::string &msg_id)
 
     for (const auto &dsrc_id : this->wave_cfg_dsrc_ids_) 
     {
-        if(msg_id == dsrc_id)
+        if (msg_id == dsrc_id)
             return true;
     }
     return false;
