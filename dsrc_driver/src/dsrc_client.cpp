@@ -185,17 +185,19 @@ void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& d
             std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.begin() + end_index);
 
             // Check if specified MessageFrame size matches actual data size
-            std::cerr << "msg_vec: " << msg_vec << std::endl;
+            std::cerr << "msg_vec: ";
+            printVector(msg_vec);
             std::cerr << "msg_vec size: " << msg_vec.size() << std::endl;
-            if (!isValidMsgSize(msg_vec, start_index, end_index))
+            if (!isValidMsgSize(msg_vec, start_index, end_index, entry))
             {
                 continue;
             }
             else
             {
-                if (!isValidPSID(msg_id))
+                if (!isValidPSID(std::to_string(msg_id)))
                 {
-                    std::cerr << "Sending message vector: " << msg_vec << std::endl;
+                    std::cerr << "Sending message vector: ";
+                    printVector(msg_vec);
                     onMessageReceived(msg_vec, msg_id);
                     break;
                 }
@@ -208,13 +210,26 @@ void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& d
     }
 }
 
-bool DSRCOBUClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index)
+void DSRCOBUClient::printVector(const std::vector<uint8_t>& vec)
+{
+    std::cerr << "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        std::cerr << static_cast<int>(vec[i]);
+        if (i < vec.size() - 1) {
+            std::cerr << ", ";
+        }
+    }
+    std::cerr << "]";
+}
+
+bool DSRCOBUClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index, const std::vector<uint8_t> entry)
 {
     if (msg_vec.size() > 255) 
     {
         auto tmp_start_index = start_index + long_frame;
         std::vector<uint8_t> long_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
-        msg_size = (static_cast<uint16_t>(long_vec[2]) << 8) | long_vec[3];
+        std::cerr << "long_vec size: " << long_vec.size() << std::endl;
+        auto msg_size = (static_cast<uint16_t>(long_vec[2]) << 8) | long_vec[3];
         std::cerr << "Frame size: " << std::to_string(msg_size) << std::endl;
         if (msg_size == long_vec.size())
             {
@@ -230,9 +245,8 @@ bool DSRCOBUClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t st
     {
         auto tmp_start_index = start_index + short_frame;
         std::vector<uint8_t> short_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
-        std::cerr << "short_vec: " << short_vec << std::endl;
         std::cerr << "short_vec size: " << short_vec.size() << std::endl;
-        msg_size = short_vec[2];
+        auto msg_size = short_vec[2];
         std::cerr << "Frame size: " << std::to_string(msg_size) << std::endl;
         if (msg_size == short_vec.size())
             {

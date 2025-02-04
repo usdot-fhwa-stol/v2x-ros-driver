@@ -128,12 +128,17 @@ public:
     /**
      * @brief Checks actual message vector size against size specified in MessageFrame
      */
-    bool isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index);
+    bool isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index, const std::vector<uint8_t> entry);
     
     /**
      * @brief Checks msg_id against psid list to make sure a WSA with valid PSID is not accidentally used instead of MessageFrame
      */
     bool isValidPSID(const std::string& msg_id);
+
+    /**
+     * @brief Helper function to print vectors for debugging
+     */
+    void printVector(const std::vector<uint8_t>& vec);
 
 
 private:
@@ -154,8 +159,6 @@ private:
 
     int long_frame = 4;
     int short_frame = 3;
-    uint16_t msg_size;
-    uint16_t msg_id_test;
 
     /**
     * @brief maintains the process thread
