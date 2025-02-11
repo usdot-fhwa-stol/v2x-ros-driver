@@ -140,6 +140,11 @@ public:
      */
     void printVector(const std::vector<uint8_t>& vec);
 
+    /**
+     * @brief Helper function to convert a hex string to a byte array
+     */
+    std::vector<uint8_t> hexStringToByteArray(const std::string& hexString) const;
+
 
 private:
     std::unique_ptr<boost::asio::io_service> io_;
@@ -159,6 +164,7 @@ private:
 
     int long_frame = 4;
     int short_frame = 3;
+    int validMsgCounter = 0;
 
     /**
     * @brief maintains the process thread

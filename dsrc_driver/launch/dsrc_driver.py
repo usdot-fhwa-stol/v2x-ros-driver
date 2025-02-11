@@ -24,7 +24,7 @@ import os
 
 
 '''
-This file is can be used to launch the CARMA dsrc_driver_node.
+This file can be used to launch the CARMA dsrc_driver_node.
   Though in carma-platform it may be launched directly from the base launch file.
 '''
 

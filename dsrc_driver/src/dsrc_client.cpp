@@ -175,7 +175,6 @@ void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& d
         if (len == -1) { continue; }
         // If the length makes sense bsmPub(fits in the buffer), copy out the message bytes and pass to the Application class
         if ((i + 1 + len + len_bytes) < entry.size()) {
-            // bool found_valid_msg = true;
             if (!IsValidMsgID(std::to_string(msg_id))) { continue; }
             std::cerr << "Possible msg_id: " << std::to_string(msg_id) << std::endl;
 
@@ -187,7 +186,7 @@ void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& d
             // Check if specified MessageFrame size matches actual data size
             std::cerr << "msg_vec: ";
             printVector(msg_vec);
-            std::cerr << "msg_vec size: " << msg_vec.size() << std::endl;
+            std::cerr << std::endl << "msg_vec size: " << msg_vec.size() << std::endl;
             if (!isValidMsgSize(msg_vec, start_index, end_index, entry))
             {
                 continue;
@@ -196,7 +195,8 @@ void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& d
             {
                 if (!isValidPSID(std::to_string(msg_id)))
                 {
-                    std::cerr << "Sending message vector: ";
+                    validMsgCounter++;
+                    std::cerr << "Sending message vector " << std::to_string(validMsgCounter) << " : ";
                     printVector(msg_vec);
                     onMessageReceived(msg_vec, msg_id);
                     break;
@@ -222,6 +222,26 @@ void DSRCOBUClient::printVector(const std::vector<uint8_t>& vec)
     std::cerr << "]";
 }
 
+std::vector<uint8_t> DSRCOBUClient::hexStringToByteArray(const std::string& hexString) const
+{
+    std::vector<uint8_t> byteArray;
+
+    // Loop through the hex string, two characters at a time
+    for (size_t i = 0; i < hexString.length(); i += 2) 
+    {
+        // Extract two characters representing a byte
+        auto byteString = hexString.substr(i, 2);
+
+        // Convert the byte string to a uint8_t value
+        auto byteValue = static_cast<uint8_t>(stoi(byteString, nullptr, 16));
+
+        // Add the byte to the byte array
+        byteArray.push_back(byteValue);
+    }
+
+    return byteArray;
+}
+
 bool DSRCOBUClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index, const std::vector<uint8_t> entry)
 {
     if (msg_vec.size() > 255) 
@@ -229,7 +249,7 @@ bool DSRCOBUClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t st
         auto tmp_start_index = start_index + long_frame;
         std::vector<uint8_t> long_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
         std::cerr << "long_vec size: " << long_vec.size() << std::endl;
-        auto msg_size = (static_cast<uint16_t>(long_vec[2]) << 8) | long_vec[3];
+        auto msg_size = (static_cast<uint16_t>(msg_vec[2]) << 8) | msg_vec[3];
         std::cerr << "Frame size: " << std::to_string(msg_size) << std::endl;
         if (msg_size == long_vec.size())
             {
@@ -246,7 +266,7 @@ bool DSRCOBUClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t st
         auto tmp_start_index = start_index + short_frame;
         std::vector<uint8_t> short_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
         std::cerr << "short_vec size: " << short_vec.size() << std::endl;
-        auto msg_size = short_vec[2];
+        auto msg_size = msg_vec[2];
         std::cerr << "Frame size: " << std::to_string(msg_size) << std::endl;
         if (msg_size == short_vec.size())
             {
@@ -263,16 +283,22 @@ bool DSRCOBUClient::isValidPSID(const std::string &msg_id)
 {
     if (this->wave_cfg_psids_.empty())
     {
-        if (this->wave_file_path.size() == 0)
+        if (this->wave_file_path.empty())
         {
             return false;
         }
         loadWaveConfigDsrcIds(this->wave_file_path);
-    }    
+    }
 
     for (const auto &psid : this->wave_cfg_psids_) 
     {
-        if (msg_id == psid)
+        // Convert the entire hex string to an integer
+        int psid_value = std::stoi(psid, nullptr, 16);
+        // Convert the integer to its decimal string representation
+        std::string psidInt = std::to_string(psid_value);
+        
+        std::cerr << "Testing: " << msg_id << " : " << psidInt << std::endl;
+        if (msg_id == psidInt)
             return true;
     }
     return false;
@@ -287,7 +313,7 @@ bool DSRCOBUClient::IsValidMsgID(const std::string &msg_id)
             return false;
         }
         loadWaveConfigDsrcIds(this->wave_file_path);
-    }    
+    }
 
     for (const auto &dsrc_id : this->wave_cfg_dsrc_ids_) 
     {
@@ -296,7 +322,7 @@ bool DSRCOBUClient::IsValidMsgID(const std::string &msg_id)
     }
     return false;
 }
-
+ 
 void DSRCOBUClient::set_wave_file_path(const std::string& path)
 {
     this->wave_file_path = path;
@@ -375,6 +401,7 @@ void DSRCOBUClient::loadWaveConfigDsrcIds(const std::string &fileName)
     {
         auto entry = it.GetObject();
         wave_cfg_dsrc_ids_.emplace_back(entry["dsrc_id"].GetString());
+        wave_cfg_psids_.emplace_back(entry["psid"].GetString());
     }
 }
 
