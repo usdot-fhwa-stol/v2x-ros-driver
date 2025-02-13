@@ -1,4 +1,4 @@
-# dsrc_driver
+# v2x_ros_driver
 
 This package defines a carma-plaform compatible driver for Cohda DSRC OBUs though other models of OBU may work as well. The design documents for this driver can be found here https://usdot-carma.atlassian.net/wiki/spaces/CRMMSG/pages/1319272562/Detailed+Design+-+DSRC+OBU+Driver
 

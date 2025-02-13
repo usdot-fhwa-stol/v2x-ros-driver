@@ -42,28 +42,28 @@
 #include <string>
 #include <vector>
 
-#include "dsrc_driver/dsrc_client.h"
-namespace DSRCApplication
+#include "v2x_ros_driver/v2x_radio_client.h"
+namespace V2XDriverApplication
 {
 
-DSRCOBUClient::DSRCOBUClient() :
+V2XRadioClient::V2XRadioClient() :
     running_(false)
 {}
 
 
-DSRCOBUClient::~DSRCOBUClient() {
+V2XRadioClient::~V2XRadioClient() {
     try{
         close();
     }catch(...){}
 }
 
-bool DSRCOBUClient::connect(const std::string &remote_address, unsigned short remote_port,
+bool V2XRadioClient::connect(const std::string &remote_address, unsigned short remote_port,
                             unsigned short local_port) {
     boost::system::error_code ignored_ec;
     return connect(remote_address, remote_port, local_port, ignored_ec);
 }
 
-bool DSRCOBUClient::connect(const std::string &remote_address,
+bool V2XRadioClient::connect(const std::string &remote_address,
                                 unsigned short remote_port,
                                  unsigned short local_port,
                                  boost::system::error_code &ec)
@@ -100,7 +100,7 @@ bool DSRCOBUClient::connect(const std::string &remote_address,
     }
     catch(std::exception e)
     {
-        std::cerr << "DSRCOBUClient::connect threw exception : " << e.what();
+        std::cerr << "V2XRadioClient::connect threw exception : " << e.what();
         return false;
     };
 
@@ -127,7 +127,7 @@ bool DSRCOBUClient::connect(const std::string &remote_address,
     return true;
 }
 
-void DSRCOBUClient::close() {
+void V2XRadioClient::close() {
     if(!running_) return;
     running_ = false;
     work_.reset();
@@ -138,7 +138,7 @@ void DSRCOBUClient::close() {
     onDisconnect();
 }
 
-void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& data)
+void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& data)
 {
     auto & entry = *data;
     // Valid message should begin with 2 bytes message ID and 1 byte length.
@@ -168,7 +168,7 @@ void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& d
         else {
             // TODO lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length
             // marker. It doesn't look like we'll be receiving anything that long
-            std::cerr << "DSRCOBUClient::process() : received a message with length field longer than 16383." << std::endl;
+            std::cerr << "V2XRadioClient::process() : received a message with length field longer than 16383." << std::endl;
             continue;
         }
         if (len == -1) { continue; }
@@ -186,7 +186,7 @@ void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& d
     }
 }
 
-bool DSRCOBUClient::IsValidMsgID(const std::string &msg_id)
+bool V2XRadioClient::IsValidMsgID(const std::string &msg_id)
 {
     if(this->wave_cfg_dsrc_ids_.empty())
     {
@@ -194,10 +194,10 @@ bool DSRCOBUClient::IsValidMsgID(const std::string &msg_id)
         {
             return false;
         }
-        loadWaveConfigDsrcIds(this->wave_file_path);
-    }    
+        loadWaveConfigIds(this->wave_file_path);
+    }
 
-    for (const auto &dsrc_id : this->wave_cfg_dsrc_ids_) 
+    for (const auto &dsrc_id : this->wave_cfg_dsrc_ids_)
     {
         if(msg_id == dsrc_id)
             return true;
@@ -205,13 +205,13 @@ bool DSRCOBUClient::IsValidMsgID(const std::string &msg_id)
     return false;
 }
 
-void DSRCOBUClient::set_wave_file_path(const std::string& path)
+void V2XRadioClient::set_wave_file_path(const std::string& path)
 {
     this->wave_file_path = path;
 }
 
-void DSRCOBUClient::loadWaveConfigDsrcIds(const std::string &fileName)
-{    
+void V2XRadioClient::loadWaveConfigIds(const std::string &fileName)
+{
     const char* schema = "{\n"
                         " \"$schema\":\"http://json-schema.org/draft-06/schema\",\n"
                         " \"title\":\"Wave Config Schema\",\n"
@@ -286,7 +286,7 @@ void DSRCOBUClient::loadWaveConfigDsrcIds(const std::string &fileName)
     }
 }
 
-bool DSRCOBUClient::sendDsrcMessage(const std::shared_ptr<std::vector<uint8_t>>&message) {
+bool V2XRadioClient::sendV2xMessage(const std::shared_ptr<std::vector<uint8_t>>&message) {
     if(!running_) return false;
     try {
         output_strand_->post([this,message]()
