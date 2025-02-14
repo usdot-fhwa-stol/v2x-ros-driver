@@ -96,7 +96,7 @@ carma_ros2_utils::CallbackReturn Node::handle_on_configure(const rclcpp_lifecycl
     RCLCPP_INFO_STREAM(this->get_logger(), "Loaded params: " << config_);
 
     pre_spin();
-    //TODO: Update package share directory after renaming package
+
     std::string package_share_directory = ament_index_cpp::get_package_share_directory("v2x_ros_driver");
 
     std::string wave_cfg_file = package_share_directory + "/etc/wave.json";
@@ -306,7 +306,7 @@ void Node::pre_spin()
                 }
             }catch(std::exception e)
             {
-                RCLCPP_ERROR_STREAM(this->get_logger(),"Exception connecting to dsrc radio: " << e.what() << " error_code: " << ec.message());
+                RCLCPP_ERROR_STREAM(this->get_logger(),"Exception connecting to v2x radio: " << e.what() << " error_code: " << ec.message());
                 RCLCPP_ERROR_STREAM(this->get_logger(),"Config:\n\tv2x_radio_address:" << config_.v2x_radio_address
                                          << "\n\tv2x_radio_listening_port:" << config_.v2x_radio_listening_port
                                          << "\n\tlistening_port:" << config_.listening_port);
