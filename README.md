@@ -4,10 +4,10 @@
 
 
 
-# CARMACohdaDsrcDriver
-CARMACohdaDsrcDriver is the driver for use with a Cohda Dedicated Short-Range Radio On-board Units (DSRC OBU) and the CARMA Platform
+# V2X-ROS-driver
+V2X-ROS-driver is the driver for use with V2X radios and the CARMA Platform. It implements the communication interface allowing SAE J2735 2016 communication to be exposed to a ROS network.
 
-To add this driver to your CARMAPlatform project simply clone this repository into your Catkin workspace
+To add this driver to your CARMAPlatform project simply clone this repository into your workspace.
 
 # CARMAPlatform
 The primary CARMAPlatform repository can be found [here](https://github.com/usdot-fhwa-stol/carma-platform) and is part of the [USDOT FHWA STOL](https://github.com/usdot-fhwa-stol/)
