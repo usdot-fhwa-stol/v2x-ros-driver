@@ -5,12 +5,10 @@
 
 
 # V2X-ROS-driver
-V2X-ROS-driver is the driver for use with V2X radios and the CARMA Platform. It implements the communication interface allowing SAE J2735 2016 communication to be exposed to a ROS network.
-
-To add this driver to your CARMAPlatform project simply clone this repository into your workspace.
+V2X-ROS-driver is the driver for use with V2X radios. It implements the communication interface allowing UPER-encoded SAE J2735 communication to be exposed to a ROS network using [carma_driver_msgs/msg/ByteArray] (https://github.com/usdot-fhwa-stol/carma-msgs/blob/develop/carma_driver_msgs/msg/ByteArray.msg). It has been tested with SAE J2735 2016 but can support later versions as well.
 
 # CARMAPlatform
-The primary CARMAPlatform repository can be found [here](https://github.com/usdot-fhwa-stol/carma-platform) and is part of the [USDOT FHWA STOL](https://github.com/usdot-fhwa-stol/)
+The driver was initially developed for CARMAPlatform. The primary CARMAPlatform repository can be found [here](https://github.com/usdot-fhwa-stol/carma-platform) and is part of the [USDOT FHWA STOL](https://github.com/usdot-fhwa-stol/)
 github organization. Documentation on how the CARMAPlatform functions, how it will evolve over time, and how you can contribute can be found at the above links as well
 
 ## Contribution
