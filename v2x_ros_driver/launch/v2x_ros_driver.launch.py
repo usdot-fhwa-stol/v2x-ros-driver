@@ -18,6 +18,11 @@ from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
+from launch.actions import Shutdown
+import launch.actions
+import launch.events
+import launch_ros.events.lifecycle
+import lifecycle_msgs.msg
 from carma_ros2_utils.launch.get_current_namespace import GetCurrentNamespace
 
 import os
@@ -34,6 +39,10 @@ def generate_launch_description():
     log_level = LaunchConfiguration('log_level')
     declare_log_level_arg = DeclareLaunchArgument(
         name ='log_level', default_value='WARN')
+
+    configuration_delay = LaunchConfiguration('configuration_delay')
+    declare_configuration_delay_arg = DeclareLaunchArgument(
+        name ='configuration_delay', default_value='4.0')
 
     # Get parameter file path
     param_file_path = os.path.join(
@@ -63,10 +72,36 @@ def generate_launch_description():
                     ],
                     parameters=[ param_file_path ]
             ),
+        ],
+        on_exit= Shutdown()
+    )
+
+    ros2_cmd = launch.substitutions.FindExecutable(name='ros2')
+
+    process_configure = launch.actions.ExecuteProcess(
+        cmd=[ros2_cmd, "lifecycle", "set", "/v2x_ros_driver", "configure"],
+    )
+
+    configuration_trigger = launch.actions.TimerAction(
+        period=configuration_delay,
+        actions=[
+            process_configure,
         ]
     )
 
+    configured_event_handler = launch.actions.RegisterEventHandler(launch.event_handlers.OnExecutionComplete(
+        target_action=process_configure, on_completion=[
+            launch.actions.ExecuteProcess(
+                cmd=[ros2_cmd, "lifecycle", "set", "/v2x_ros_driver", "activate"],
+            )
+        ])
+    )
+
+
     return LaunchDescription([
         declare_log_level_arg,
-        container
+        declare_configuration_delay_arg,
+        container,
+        configuration_trigger,
+        configured_event_handler
     ])
