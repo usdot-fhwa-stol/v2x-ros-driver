@@ -14,9 +14,9 @@ In order to deploy the driver in a ros2-foxy configured environment, the followi
 1. Pull the latest docker image for driver from dockerhub
 
 ```
-docker pull usdotfhwastol/v2x-ros-driver:latest
+docker pull usdotfhwastol/v2x-ros-driver:<latest-release-tag>
 ```
-
+*Latest release tag can be obtained from github tags. Docker images are tagged with the same tag.*
 #### Note: The repository was recently renamed and until a new release is available, users may use usdotfhwastol/carma-cohda-dsrc-driver:latest which builds older versions of this code base but is manufacturer and DSRC/C-V2X agnostic.
 
 2. Run the Docker image
@@ -28,7 +28,7 @@ docker run -it --network host usdotfhwastol/v2x-ros-driver:latest
 
 ## Build from source
 
-#### Note: Assumption here is that user is building on a ros2 focal development environment.
+#### Note: Assumption here is that user is building on a ros2 foxy development environment.
 
 1. Clone the repository into workspace
 

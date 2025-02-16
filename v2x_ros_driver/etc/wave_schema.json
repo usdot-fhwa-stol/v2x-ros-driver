@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-06/schema#",
   "title": "Wave Config Schema",
-  "description": "A simple schema to describe Wave messages",
+  "description": "A simple schema to describe WAVE messages",
   "type": "array",
   "items": {
     "type": "object",
