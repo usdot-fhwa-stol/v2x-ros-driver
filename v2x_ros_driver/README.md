@@ -39,7 +39,7 @@ git clone https://github.com/usdot-fhwa-stol/v2x-ros-driver.git
 2. Clone the dependencies into workspace
 
 ```
-chmod +x checkout.bash
+chmod +x <path_to_workspace>/docker/checkout.bash
 ./<path_to_workspace>/docker/checkout.bash -r <path_to_workspace> -b <latest_release_tag_from_github>
 ```
 
