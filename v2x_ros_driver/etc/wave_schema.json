@@ -15,7 +15,7 @@
         "type": "string"
       },
       "dsrc_id": {
-        "description": "J2735 wave id assigned to message type in decimal",
+        "description": "J2735 DSRC id assigned to message type in decimal",
         "type": "string"
       },
       "channel": {
