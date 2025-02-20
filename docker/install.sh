@@ -30,7 +30,7 @@ if [[ ! -z "$ROS2_PACKAGES" ]]; then
     --cmake-args -DCMAKE_BUILD_TYPE=Release
 else
     colcon build \
-    --packages-up-to dsrc_driver \
+    --packages-up-to dsrc_driver driver_shutdown_ros2 \
     --parallel-workers $(nproc) \
     --cmake-args -DCMAKE_BUILD_TYPE=Release
 fi
