@@ -1,4 +1,4 @@
-#  Copyright (C) 2018-2021 LEIDOS.
+#  Copyright (C) 2018-2025 LEIDOS.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License"); you may not
 #  use this file except in compliance with the License. You may obtain a copy of
@@ -15,8 +15,8 @@
 # Image build
 ARG DOCKER_ORG="usdotfhwastoldev"
 ARG DOCKER_TAG="develop"
-FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} as base_image
-FROM base_image as setup
+FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} AS base_image
+FROM base_image AS setup
 ARG GIT_BRANCH="develop"
 
 ARG ROS1_PACKAGES=""
@@ -30,7 +30,7 @@ RUN ~/src/docker/checkout.bash -b ${GIT_BRANCH}
 RUN ~/src/docker/install.sh
 
 # Final image
-FROM setup as final
+FROM setup AS final
 
 ARG BUILD_DATE="NULL"
 ARG VERSION="NULL"
@@ -38,7 +38,7 @@ ARG VCS_REF="NULL"
 
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.name="v2x-ros-driver"
-LABEL org.label-schema.description="Cohda DSRC On-Board Unit comms driver for the CARMA Platform"
+LABEL org.label-schema.description="ROS driver for C-V2X and DSRC V2X radios"
 LABEL org.label-schema.vendor="Leidos"
 LABEL org.label-schema.version=${VERSION}
 LABEL org.label-schema.url="https://highways.dot.gov/research/research-programs/operations/CARMA"
@@ -49,4 +49,4 @@ LABEL org.label-schema.build-date=${BUILD_DATE}
 COPY --from=setup /home/carma/install /opt/carma/install
 RUN sudo chmod -R +x /opt/carma/install
 
-CMD  [ "wait-for-it.sh", "localhost:11311", "--", "roslaunch", "dsrc_driver", "dsrc_node.launch", "remap_ns:=/saxton_cav/drivers" ]
+CMD  [ "wait-for-it", "localhost:11311", "--", "ros2","launch", "v2x_ros_driver", "v2x_ros_driver.launch.py", "remap_ns:=/saxton_cav/drivers" ]

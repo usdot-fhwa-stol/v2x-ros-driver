@@ -33,14 +33,14 @@
  */
 #include <rclcpp/rclcpp.hpp>
 
-#include "dsrc_driver/dsrc_driver_node.h"
+#include "v2x_ros_driver/v2x_ros_driver_node.h"
 
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
 
-  auto node = std::make_shared<DSRCApplication::Node>(rclcpp::NodeOptions());
-  
+  auto node = std::make_shared<V2XDriverApplication::Node>(rclcpp::NodeOptions());
+
   rclcpp::executors::MultiThreadedExecutor executor;
   executor.add_node(node->get_node_base_interface());
   executor.spin();

@@ -63,11 +63,11 @@ services:
       - /opt/carma/vehicle:/opt/carma/vehicle
     command: bash -c 'source /opt/carma/install_ros2/setup.bash && ros2 launch /opt/carma/vehicle/config/carma-messenger-docker.launch.py'
 
-  cohda_dsrc_driver:
+  v2x_ros_driver:
     build: 
       context: ..
       dockerfile: .devcontainer/Dockerfile.builder
-    container_name: carma-cohda-dsrc-driver
+    container_name: v2x-ros-driver
     network_mode: host
     volumes_from:
       - container:carma-config:ro

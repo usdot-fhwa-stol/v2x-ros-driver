@@ -44,23 +44,23 @@
 #include <vector>
 
 
-#include "dsrc_driver/udp_listener.h"
-namespace DSRCApplication
+#include "v2x_ros_driver/udp_listener.h"
+namespace V2XDriverApplication
 {
 
-class DSRCOBUClient
+class V2XRadioClient
 {
 
 public:
     /**
-     * @brief Initializes the DSRC client, sets up i/o services
+     * @brief Initializes the V2X radio client, sets up i/o services
      */
-    DSRCOBUClient();
-    ~DSRCOBUClient();
+    V2XRadioClient();
+    ~V2XRadioClient();
 
     /**
-    * @brief Connects the driver to the OBU at the provided IPv4 address and Port
-    * @param address IPv4 address of OBU
+    * @brief Connects the driver to the radio at the provided IPv4 address and Port
+    * @param address IPv4 address of radio
     * @param port of client service
     * @param ec error code set during connect
     * @return true on sucessful connect, false otherwise
@@ -86,7 +86,7 @@ public:
     inline bool connected() { return running_; }
 
     /**
-    * @brief Signaled when client is connected to an DSRC device
+    * @brief Signaled when client is connected to an v2x radio device
     */
     boost::signals2::signal<void()> onConnect;
 
@@ -108,7 +108,7 @@ public:
     /**
      * @brief sends a udp message
      */
-    bool sendDsrcMessage(const std::shared_ptr<std::vector<uint8_t>>&message);
+    bool sendV2xMessage(const std::shared_ptr<std::vector<uint8_t>>&message);
 
     /**
      * @brief Validate msg_id
@@ -118,8 +118,8 @@ public:
     /**
      * @brief load list of valid msg_id
      * */
-    void loadWaveConfigDsrcIds(const std::string &fileName);
-     
+    void loadWaveConfigIds(const std::string &fileName);
+
     /**
      * @brief set wave config path
     */

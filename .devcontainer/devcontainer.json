@@ -3,14 +3,14 @@
 {
 	// Docker Compose syntax from https://github.com/devcontainers/templates/blob/main/src/docker-existing-docker-compose/.devcontainer/devcontainer.json
 	// and https://github.com/microsoft/vscode-dev-containers/blob/main/container-templates/docker-compose/.devcontainer/devcontainer.json
-	"name": "CARMA-Cohda DSRC Driver Docker Compose Dev",
+	"name": "V2X ROS Driver Docker Compose Dev",
 
 	// Update the 'dockerComposeFile' list if you have more compose files or use different names.
 	"dockerComposeFile": "docker-compose-vscode.yml",
 
 	// The 'service' property is the name of the service for the container that VS Code should
 	// use. Update this value and .devcontainer/docker-compose.yml to the real service name.
-	"service": "cohda_dsrc_driver",
+	"service": "v2x_ros_driver",
 
 	// The 'workspaceFolder' property is the path VS Code should open by default when
 	// connected. Corresponds to a volume mount in .devcontainer/docker-compose.yml
