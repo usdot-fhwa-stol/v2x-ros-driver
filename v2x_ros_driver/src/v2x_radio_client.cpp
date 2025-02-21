@@ -176,7 +176,6 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
         // If the length makes sense bsmPub(fits in the buffer), copy out the message bytes and pass to the Application class
         if ((i + 1 + len + len_bytes) < entry.size()) {
             if (!IsValidMsgID(std::to_string(msg_id))) { continue; }
-            std::cerr << "Possible msg_id: " << std::to_string(msg_id) << std::endl;
 
             size_t start_index = i;
             size_t end_index = i + 2 + len + len_bytes; // includes 2 msgID bytes before message body
@@ -184,9 +183,7 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
             std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.begin() + end_index);
 
             // Check if specified MessageFrame size matches actual data size
-            std::cerr << "msg_vec: ";
             printVector(msg_vec);
-            std::cerr << std::endl << "msg_vec size: " << msg_vec.size() << std::endl;
             if (!isValidMsgSize(msg_vec, start_index, end_index, entry))
             {
                 continue;
@@ -248,9 +245,7 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
     {
         auto tmp_start_index = start_index + long_frame;
         std::vector<uint8_t> long_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
-        std::cerr << "long_vec size: " << long_vec.size() << std::endl;
         auto msg_size = (static_cast<uint16_t>(msg_vec[2]) << 8) | msg_vec[3];
-        std::cerr << "Frame size: " << std::to_string(msg_size) << std::endl;
         if (msg_size == long_vec.size())
             {
                 return true;
@@ -265,9 +260,7 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
     {
         auto tmp_start_index = start_index + short_frame;
         std::vector<uint8_t> short_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
-        std::cerr << "short_vec size: " << short_vec.size() << std::endl;
         auto msg_size = msg_vec[2];
-        std::cerr << "Frame size: " << std::to_string(msg_size) << std::endl;
         if (msg_size == short_vec.size())
             {
                 return true;
@@ -296,8 +289,6 @@ bool V2XRadioClient::isValidPSID(const std::string &msg_id)
         int psid_value = std::stoi(psid, nullptr, 16);
         // Convert the integer to its decimal string representation
         std::string psidInt = std::to_string(psid_value);
-        
-        std::cerr << "Testing: " << msg_id << " : " << psidInt << std::endl;
         if (msg_id == psidInt)
             return true;
     }
