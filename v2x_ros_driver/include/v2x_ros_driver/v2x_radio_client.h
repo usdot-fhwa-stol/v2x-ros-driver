@@ -43,7 +43,7 @@
 #include <queue>
 #include <vector>
 
-
+#include <rclcpp/rclcpp.hpp>
 #include "v2x_ros_driver/udp_listener.h"
 namespace V2XDriverApplication
 {
@@ -147,6 +147,8 @@ public:
 
 
 private:
+    rclcpp::Logger logger_{rclcpp::get_logger("v2x_radio_client")};
+
     std::unique_ptr<boost::asio::io_service> io_;
     std::unique_ptr<boost::asio::io_service::strand> output_strand_;
     std::shared_ptr<boost::asio::io_service::work> work_;
@@ -162,10 +164,11 @@ private:
     boost::asio::ip::udp::endpoint remote_udp_ep_;
     std::unique_ptr<cav::UDPListener> udp_listener_;
 
-    int long_frame = 4;
-    int short_frame = 3;
-    int validMsgCounter = 0;
-
+    /** @brief WAVE Service Advertisement (WSA) frame size (bytes) for J2735 payloads >127 octets. IEEE 1609.3 (2020) - 8.1.3 */
+    static const int long_frame_ = 4;
+    /** @brief WAVE Service Advertisement (WSA) frame size (bytes) for J2735 payloads <127 octets. IEEE 1609.3 (2020) - 8.1.3 */
+    static const int short_frame_ = 3;
+    
     /**
     * @brief maintains the process thread
     *

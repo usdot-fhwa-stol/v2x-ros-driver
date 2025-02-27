@@ -101,7 +101,7 @@ bool V2XRadioClient::connect(const std::string &remote_address,
     }
     catch(std::exception e)
     {
-        std::cerr << "V2XRadioClient::connect threw exception : " << e.what();
+        RCLCPP_ERROR_STREAM(logger_, "V2XRadioClient::connect threw exception : " << e.what());
         return false;
     };
 
@@ -169,7 +169,7 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
         else {
             // TODO lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length
             // marker. It doesn't look like we'll be receiving anything that long
-            std::cerr << "V2XRadioClient::process() : received a message with length field longer than 16383." << std::endl;
+            RCLCPP_WARN_STREAM(logger_, "V2XRadioClient::process() : received a message with length field longer than 16383.");
             continue;
         }
         if (len == -1) { continue; }
@@ -192,8 +192,6 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
             {
                 if (!isValidPSID(std::to_string(msg_id)))
                 {
-                    validMsgCounter++;
-                    std::cerr << "Sending message vector " << std::to_string(validMsgCounter) << " : ";
                     printVector(msg_vec);
                     onMessageReceived(msg_vec, msg_id);
                     break;
@@ -209,14 +207,16 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
 
 void V2XRadioClient::printVector(const std::vector<uint8_t>& vec)
 {
-    std::cerr << "[";
+    std::ostringstream oss;
+    oss << "[";
     for (size_t i = 0; i < vec.size(); ++i) {
-        std::cerr << static_cast<int>(vec[i]);
+        oss << static_cast<int>(vec[i]);
         if (i < vec.size() - 1) {
-            std::cerr << ", ";
+            oss << ", ";
         }
     }
-    std::cerr << "]";
+    oss << "]";
+    RCLCPP_INFO_STREAM(logger_, "Sending message vector: " << oss.str());
 }
 
 std::vector<uint8_t> V2XRadioClient::hexStringToByteArray(const std::string& hexString) const
@@ -243,7 +243,7 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
 {
     if (msg_vec.size() > 255) 
     {
-        auto tmp_start_index = start_index + long_frame;
+        auto tmp_start_index = start_index + long_frame_;
         std::vector<uint8_t> long_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
         auto msg_size = (static_cast<uint16_t>(msg_vec[2]) << 8) | msg_vec[3];
         if (msg_size == long_vec.size())
@@ -252,13 +252,13 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
             }
         else 
         {
-            std::cerr << "Size in possible MessageFrame does not match actual data size. Checking rest of data." << std::endl;
+            RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
             return false;
         }
     }
     else 
     {
-        auto tmp_start_index = start_index + short_frame;
+        auto tmp_start_index = start_index + short_frame_;
         std::vector<uint8_t> short_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
         auto msg_size = msg_vec[2];
         if (msg_size == short_vec.size())
@@ -266,7 +266,7 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
                 return true;
             }
         else {
-            std::cerr << "Size in possible MessageFrame does not match actual data size. Checking rest of data." << std::endl;
+            RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
             return false;
         }
     }
@@ -290,6 +290,7 @@ bool V2XRadioClient::isValidPSID(const std::string &msg_id)
         // Convert the integer to its decimal string representation
         std::string psidInt = std::to_string(psid_value);
         if (msg_id == psidInt)
+            RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
             return true;
     }
     return false;
@@ -361,14 +362,14 @@ void V2XRadioClient::loadWaveConfigIds(const std::string &fileName)
     }
     catch (const std::ifstream::failure& e)
     {
-        std::cout<<"Unable to open file : " << fileName << ", exception: " << e.what();
+        RCLCPP_ERROR_STREAM(logger_, "Unable to open file : " << fileName << ", exception: " << e.what());
         return ;
     }
 
     rapidjson::Document sd;
     if(sd.Parse(schema).HasParseError())
     {
-        std::cout<<"Invalid Wave Config Schema";
+        RCLCPP_ERROR_STREAM(logger_, "Invalid Wave Config Schema");
         return ;
     }
 
@@ -377,14 +378,14 @@ void V2XRadioClient::loadWaveConfigIds(const std::string &fileName)
     rapidjson::IStreamWrapper isw(file);
     if(doc.ParseStream(isw).HasParseError())
     {
-        std::cout<<"Error Parsing Wave Config";
+        RCLCPP_ERROR_STREAM(logger_, "Error Parsing Wave Config");
         return ;
     }
 
     rapidjson::SchemaValidator validator(schemaDocument);
     if(!doc.Accept(validator))
     {
-        std::cout<<"Wave Config improperly formatted";
+        RCLCPP_ERROR_STREAM(logger_, "Wave Config improperly formatted");
         return;
     }
 
