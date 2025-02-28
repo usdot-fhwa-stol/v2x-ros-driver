@@ -397,7 +397,8 @@ void V2XRadioClient::loadWaveConfigIds(const std::string &fileName)
     }
 }
 
-bool V2XRadioClient::sendV2xMessage(const std::shared_ptr<std::vector<uint8_t>>&message) {
+bool V2XRadioClient::sendV2xMessage(const std::shared_ptr<std::vector<uint8_t>> &message)
+{
     if(!running_) return false;
     try {
         output_strand_->post([this,message]()

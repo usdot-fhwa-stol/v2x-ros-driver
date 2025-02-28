@@ -60,33 +60,31 @@ public:
 
     /**
     * @brief Connects the driver to the radio at the provided IPv4 address and Port
-    * @param address IPv4 address of radio
-    * @param port of client service
-    * @param ec error code set during connect
-    * @return true on sucessful connect, false otherwise
+    * @param remote_address IPv4 address of radio
+    * @param remote_port Port of client service
+    * @param local_port Local port to receive incoming data
+    * @param ec Error code set during connect
+    * @return True on sucessful connect, false otherwise
     */
     bool connect(const std::string &remote_address,unsigned short remote_port,
                         unsigned short local_port,boost::system::error_code &ec);
-
 
     bool connect(const std::string &remote_address, unsigned short remote_port,
                  unsigned short local_port);
 
     /**
-    * @brief Closes connection
-    *
-    * closes all sockets, and stops all threads used for io and processing, blocks until threads are closed
+    * @brief Closes connection - closes all sockets, and stops all threads used for io and processing, blocks until threads are closed
     */
     void close();
 
     /**
-    * @brief returns connected state
-    * @return returns true if connected, false otherwise
+    * @brief Returns connected state
+    * @return Returns true if connected, false otherwise
     */
     inline bool connected() { return running_; }
 
     /**
-    * @brief Signaled when client is connected to an v2x radio device
+    * @brief Signaled when client is connected to a V2X radio device
     */
     boost::signals2::signal<void()> onConnect;
 
@@ -106,42 +104,53 @@ public:
     boost::signals2::signal<void(std::vector<uint8_t> const &, uint16_t id)> onMessageReceived;
 
     /**
-     * @brief sends a udp message
+     * @brief Sends a UDP message
+     * @param message Message vector to be sent
      */
-    bool sendV2xMessage(const std::shared_ptr<std::vector<uint8_t>>&message);
+    bool sendV2xMessage(const std::shared_ptr<std::vector<uint8_t>> &message);
 
     /**
-     * @brief Validate msg_id
-     * */
+     * @brief Validate possible Message ID
+     * @param msg_id Message ID under test
+     */
     bool IsValidMsgID(const std::string &msg_id);
 
     /**
-     * @brief load list of valid msg_id
-     * */
+     * @brief Load list of valid msg_id
+     * @param fileName Configuration file to be loaded
+     */
     void loadWaveConfigIds(const std::string &fileName);
 
     /**
-     * @brief set wave config path
+     * @brief Set wave config path
+     * @param path Path where configuration file is located
     */
     void set_wave_file_path(const std::string &path);
 
     /**
      * @brief Checks actual message vector size against size specified in MessageFrame
+     * @param msg_vec Full message vector under test
+     * @param start_index Starting index for detected payload within message vector
+     * @param end_index Ending index for payload within message vector
+     * @param entry Recevied data reference used to generate test vectors
      */
     bool isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index, const std::vector<uint8_t> entry);
     
     /**
-     * @brief Checks msg_id against psid list to make sure a WSA with valid PSID is not accidentally used instead of MessageFrame
+     * @brief Checks msg_id against PSID list to make sure a WSA with valid PSID is not accidentally used instead of MessageFrame
+     * @param msg_id Message ID under test
      */
     bool isValidPSID(const std::string& msg_id);
 
     /**
      * @brief Helper function to print vectors for debugging
+     * @param vec Vector to be printer
      */
     void printVector(const std::vector<uint8_t>& vec);
 
     /**
      * @brief Helper function to convert a hex string to a byte array
+     * @param hexString Hex string to be converted
      */
     std::vector<uint8_t> hexStringToByteArray(const std::string& hexString) const;
 
@@ -170,13 +179,10 @@ private:
     static const int short_frame_ = 3;
     
     /**
-    * @brief maintains the process thread
-    *
-    * This will parse through the incoming UDP packets to find what looks like a
-    * valid J2735 message. The UPER scheme makes it hard to definitively know if
-    * a message is valid or just noise, so all possible messages from a packet are
-    * sent. This will create some false positives, but will ensure that a falsely
-    * identified message doesn't keep a real one from getting through.
+    * @brief Maintains the process thread.
+    * This will parse through the incoming UDP packets and runs various tests to find a
+    * valid J2735 message.
+    * @param data Incoming data to be processed.
     */
     void process(const std::shared_ptr<const std::vector<uint8_t>> &data);
 };
