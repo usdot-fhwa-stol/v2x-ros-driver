@@ -12,19 +12,17 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-from ament_index_python import get_package_share_directory
-from launch import LaunchDescription, LaunchContext
-from launch_ros.actions import ComposableNodeContainer
-from launch_ros.descriptions import ComposableNode
-from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
-from launch.actions import Shutdown
 import launch.actions
 import launch.events
 import launch_ros.events.lifecycle
 import lifecycle_msgs.msg
+from ament_index_python import get_package_share_directory
+from launch import LaunchDescription, LaunchContext
+from launch_ros.actions import ComposableNodeContainer
+from launch_ros.descriptions import ComposableNode
+from launch.actions import DeclareLaunchArgument, Shutdown, ExecuteProcess, OpaqueFunction
+from launch.substitutions import LaunchConfiguration
 from carma_ros2_utils.launch.get_current_namespace import GetCurrentNamespace
-from launch.actions import ExecuteProcess, OpaqueFunction
 
 import os
 
@@ -86,7 +84,7 @@ def generate_launch_description():
 
     enable_v2x_lifecycle = LaunchConfiguration('enable_v2x_lifecycle')
     declare_enable_v2x_lifecycle = DeclareLaunchArgument(
-        name ='enable_v2x_lifecycle', default_value='true')
+        name ='enable_v2x_lifecycle', default_value='false')
 
     # Get parameter file path
     param_file_path = os.path.join(
