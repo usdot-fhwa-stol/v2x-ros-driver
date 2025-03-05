@@ -137,23 +137,16 @@ public:
     bool isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index, const std::vector<uint8_t> entry);
     
     /**
-     * @brief Checks msg_id against PSID list to make sure a WSA with valid PSID is not accidentally used instead of MessageFrame
+     * @brief Checks msg_id against Provider Service ID (PSID) list to make sure a Wireless Access in Vehicular Environments (WAVE) Service Advertisement (WSA) with valid PSID is not accidentally used instead of MessageFrame
      * @param msg_id Message ID under test
      */
     bool isValidPSID(const std::string& msg_id);
 
     /**
-     * @brief Helper function to print vectors for debugging
-     * @param vec Vector to be printer
+     * @brief Helper function to print vectors to ROS stream for debugging
+     * @param vec Vector to be printed
      */
-    void printVector(const std::vector<uint8_t>& vec);
-
-    /**
-     * @brief Helper function to convert a hex string to a byte array
-     * @param hexString Hex string to be converted
-     */
-    std::vector<uint8_t> hexStringToByteArray(const std::string& hexString) const;
-
+    void printVectorHelper(const std::vector<uint8_t>& vec);
 
 private:
     rclcpp::Logger logger_{rclcpp::get_logger("v2x_radio_client")};

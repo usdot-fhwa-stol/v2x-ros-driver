@@ -158,7 +158,7 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
             // check for 0 length
             if (len_byte_1 == 0x00) { continue; }
         }
-            // length < 16384 encoded by 14 bits in 2 bytes (10xxxxxx xxxxxxxx)
+        // length < 16384 encoded by 14 bits in 2 bytes (10xxxxxx xxxxxxxx)
         else if ((len_byte_1 & 0x40) == 0x00) { //we know msb = 1, check that next bit is 0
             if (i + 3 < entry.size()) {
                 size_t len_byte_2 = entry[i + 3];
@@ -169,12 +169,13 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
         else {
             // TODO lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length
             // marker. It doesn't look like we'll be receiving anything that long
-            RCLCPP_WARN_STREAM(logger_, "V2XRadioClient::process() : received a message with length field longer than 16383.");
+            RCLCPP_WARN_STREAM(logger_, "V2XRadioClient::process() : discarding received message with length field longer than 16383.");
             continue;
         }
         if (len == -1) { continue; }
         // If the length makes sense bsmPub(fits in the buffer), copy out the message bytes and pass to the Application class
         if ((i + 1 + len + len_bytes) < entry.size()) {
+            // First step in checking for valid message. Message must begin with a valid MessageID. 
             if (!IsValidMsgID(std::to_string(msg_id))) { continue; }
 
             size_t start_index = i;
@@ -182,22 +183,25 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
             // this constructor has range [first, last) hence the + 1
             std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.begin() + end_index);
 
-            // Check if specified MessageFrame size matches actual data size
-            printVector(msg_vec);
+            // Second check for a valid message. Checks MessageFrame length field against actual payload size.
             if (!isValidMsgSize(msg_vec, start_index, end_index, entry))
             {
+                RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
                 continue;
             }
             else
             {
+                // Last check for a valid message. WSA uses same format as WAVE Short Message (WSM) and precurses the WSM in some cases.
+                // Make sure WSA is not accidentally detected before actual message. This is done by checking detected msg_id against list of PSIDs.
                 if (!isValidPSID(std::to_string(msg_id)))
                 {
-                    printVector(msg_vec);
+                    printVectorHelper(msg_vec);
                     onMessageReceived(msg_vec, msg_id);
                     break;
                 }
                 else
                 {
+                    RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
                     continue;
                 }
             }
@@ -205,7 +209,7 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
     }
 }
 
-void V2XRadioClient::printVector(const std::vector<uint8_t>& vec)
+void V2XRadioClient::printVectorHelper(const std::vector<uint8_t>& vec)
 {
     std::ostringstream oss;
     oss << "[";
@@ -216,31 +220,12 @@ void V2XRadioClient::printVector(const std::vector<uint8_t>& vec)
         }
     }
     oss << "]";
-    RCLCPP_INFO_STREAM(logger_, "Sending message vector: " << oss.str());
-}
-
-std::vector<uint8_t> V2XRadioClient::hexStringToByteArray(const std::string& hexString) const
-{
-    std::vector<uint8_t> byteArray;
-
-    // Loop through the hex string, two characters at a time
-    for (size_t i = 0; i < hexString.length(); i += 2) 
-    {
-        // Extract two characters representing a byte
-        auto byteString = hexString.substr(i, 2);
-
-        // Convert the byte string to a uint8_t value
-        auto byteValue = static_cast<uint8_t>(stoi(byteString, nullptr, 16));
-
-        // Add the byte to the byte array
-        byteArray.push_back(byteValue);
-    }
-
-    return byteArray;
+    RCLCPP_DEBUG_STREAM(logger_, "Sending message vector: " << oss.str());
 }
 
 bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index, const std::vector<uint8_t> entry)
 {
+    // If message vector is larger than 255 bytes, length field will be 2 octets.
     if (msg_vec.size() > 255) 
     {
         auto tmp_start_index = start_index + long_frame_;
@@ -252,10 +237,10 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
             }
         else 
         {
-            RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
             return false;
         }
     }
+    // If message vector is smaller than 255 bytes, length field will be 1 octet.
     else 
     {
         auto tmp_start_index = start_index + short_frame_;
@@ -265,8 +250,8 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
             {
                 return true;
             }
-        else {
-            RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
+        else
+        {
             return false;
         }
     }
@@ -285,13 +270,14 @@ bool V2XRadioClient::isValidPSID(const std::string &msg_id)
 
     for (const auto &psid : this->wave_cfg_psids_) 
     {
-        // Convert the entire hex string to an integer
+        // Convert the hex string to an integer
         int psid_value = std::stoi(psid, nullptr, 16);
         // Convert the integer to its decimal string representation
         std::string psidInt = std::to_string(psid_value);
         if (msg_id == psidInt)
-            RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
+        {
             return true;
+        }
     }
     return false;
 }
@@ -310,7 +296,9 @@ bool V2XRadioClient::IsValidMsgID(const std::string &msg_id)
     for (const auto &dsrc_id : this->wave_cfg_dsrc_ids_)
     {
         if (msg_id == dsrc_id)
+        {
             return true;
+        }
     }
     return false;
 }
