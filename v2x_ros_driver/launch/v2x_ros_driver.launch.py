@@ -32,7 +32,11 @@ This file is can be used to launch the CARMA v2x_ros_driver_node.
   Though in carma-platform it may be launched directly from the base launch file.
 '''
 
-def launch_v2x_lifecycle(context: LaunchContext, enable_v2x_driver_lifecycle_arg, configuration_delay_arg):
+'''
+This function is used to call the v2x_ros_driver_node lifecycle transitions.
+  It will configure the node and then activate it.
+'''
+def transition_v2x_driver_lifecycle(context: LaunchContext, enable_v2x_driver_lifecycle_arg, configuration_delay_arg):
 
     # Get enable_v2x_driver_lifecycle launch argument
     enable_v2x_driver_lifecycle = context.perform_substitution(enable_v2x_driver_lifecycle_arg)
@@ -50,7 +54,7 @@ def launch_v2x_lifecycle(context: LaunchContext, enable_v2x_driver_lifecycle_arg
             cmd=[ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "configure"],
         )
 
-        # Timer action
+        # Wait for configured amount of time before attempting to transition to configured state
         configuration_trigger = launch.actions.TimerAction(
             period=float(configuration_delay),
             actions=[process_configure]
@@ -69,22 +73,26 @@ def launch_v2x_lifecycle(context: LaunchContext, enable_v2x_driver_lifecycle_arg
         )
 
         return [ configuration_trigger, configured_event_handler]
-    return []
+    else:
+        return []
 
 def generate_launch_description():
 
     # Declare the log_level launch argument
     log_level = LaunchConfiguration('log_level')
     declare_log_level_arg = DeclareLaunchArgument(
-        name ='log_level', default_value='WARN')
+        name ='log_level', default_value='WARN',
+        description="The log level to use for the v2x_ros_driver_node")
 
     configuration_delay = LaunchConfiguration('configuration_delay')
     declare_configuration_delay_arg = DeclareLaunchArgument(
-        name ='configuration_delay', default_value='2.0')
+        name ='configuration_delay', default_value='2.0',
+        description="The delay in seconds before the v2x_ros_driver_node is configured")
 
     enable_v2x_driver_lifecycle = LaunchConfiguration('enable_v2x_driver_lifecycle')
     declare_enable_v2x_driver_lifecycle = DeclareLaunchArgument(
-        name ='enable_v2x_driver_lifecycle', default_value='true')
+        name ='enable_v2x_driver_lifecycle', default_value='false',
+        description="Enable the v2x_ros_driver_node lifecycle. If enabled manually transitions the node to active state. Default is false")
 
     # Get parameter file path
     param_file_path = os.path.join(
