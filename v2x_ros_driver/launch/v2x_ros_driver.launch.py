@@ -32,13 +32,13 @@ This file is can be used to launch the CARMA v2x_ros_driver_node.
   Though in carma-platform it may be launched directly from the base launch file.
 '''
 
-def launch_v2x_lifecycle(context: LaunchContext, enable_v2x_lifecycle_arg, configuration_delay_arg):
+def launch_v2x_lifecycle(context: LaunchContext, enable_v2x_driver_lifecycle_arg, configuration_delay_arg):
 
-    # Get enable_v2x_lifecycle launch argument
-    enable_v2x_lifecycle = context.perform_substitution(enable_v2x_lifecycle_arg)
+    # Get enable_v2x_driver_lifecycle launch argument
+    enable_v2x_driver_lifecycle = context.perform_substitution(enable_v2x_driver_lifecycle_arg)
 
     # Check if the lifecycle should be enabled
-    if enable_v2x_lifecycle == 'true':
+    if enable_v2x_driver_lifecycle == 'true':
         # Get the ROS2 executable
         ros2_cmd = context.perform_substitution( launch.substitutions.FindExecutable(name='ros2'))
 
@@ -82,9 +82,9 @@ def generate_launch_description():
     declare_configuration_delay_arg = DeclareLaunchArgument(
         name ='configuration_delay', default_value='2.0')
 
-    enable_v2x_lifecycle = LaunchConfiguration('enable_v2x_lifecycle')
-    declare_enable_v2x_lifecycle = DeclareLaunchArgument(
-        name ='enable_v2x_lifecycle', default_value='false')
+    enable_v2x_driver_lifecycle = LaunchConfiguration('enable_v2x_driver_lifecycle')
+    declare_enable_v2x_driver_lifecycle = DeclareLaunchArgument(
+        name ='enable_v2x_driver_lifecycle', default_value='true')
 
     # Get parameter file path
     param_file_path = os.path.join(
@@ -122,7 +122,7 @@ def generate_launch_description():
     return LaunchDescription([
         declare_log_level_arg,
         declare_configuration_delay_arg,
-        declare_enable_v2x_lifecycle,
+        declare_enable_v2x_driver_lifecycle,
         container,
-        OpaqueFunction(function=launch_v2x_lifecycle, args=[enable_v2x_lifecycle, configuration_delay]),
+        OpaqueFunction(function=launch_v2x_lifecycle, args=[enable_v2x_driver_lifecycle, configuration_delay]),
     ])
