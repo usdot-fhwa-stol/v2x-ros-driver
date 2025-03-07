@@ -142,12 +142,6 @@ public:
      */
     bool isValidPSID(const std::string& msg_id);
 
-    /**
-     * @brief Helper function to print vectors to ROS stream for debugging
-     * @param vec Vector to be printed
-     */
-    void printVectorHelper(const std::vector<uint8_t>& vec);
-
 private:
     rclcpp::Logger logger_{rclcpp::get_logger("v2x_radio_client")};
 

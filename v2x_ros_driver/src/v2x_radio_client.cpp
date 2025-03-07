@@ -195,7 +195,6 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
                 // Make sure WSA is not accidentally detected before actual message. This is done by checking detected msg_id against list of PSIDs.
                 if (!isValidPSID(std::to_string(msg_id)))
                 {
-                    printVectorHelper(msg_vec);
                     onMessageReceived(msg_vec, msg_id);
                     break;
                 }
@@ -207,20 +206,6 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
             }
         }
     }
-}
-
-void V2XRadioClient::printVectorHelper(const std::vector<uint8_t>& vec)
-{
-    std::ostringstream oss;
-    oss << "[";
-    for (size_t i = 0; i < vec.size(); ++i) {
-        oss << static_cast<int>(vec[i]);
-        if (i < vec.size() - 1) {
-            oss << ", ";
-        }
-    }
-    oss << "]";
-    RCLCPP_DEBUG_STREAM(logger_, "Sending message vector: " << oss.str());
 }
 
 bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index, const std::vector<uint8_t> entry)
@@ -240,8 +225,8 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
             return false;
         }
     }
-    // If message vector is smaller than 255 bytes, length field will be 1 octet.
-    else 
+    // If message vector is smaller than 255 bytes, length field will be 1 octet. Additional check to make sure msg_size[2] exists.
+    else if (msg_vec.size() < 255 && msg_vec.size() > 3)
     {
         auto tmp_start_index = start_index + short_frame_;
         std::vector<uint8_t> short_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
@@ -255,6 +240,7 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
             return false;
         }
     }
+    else { return false; }
 }
 
 bool V2XRadioClient::isValidPSID(const std::string &msg_id)
