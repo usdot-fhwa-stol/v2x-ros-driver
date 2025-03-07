@@ -85,7 +85,6 @@ def generate_launch_description():
         on_exit= Shutdown()
     )
 
-    # Node lifecycle activation called only if enable_v2x_driver_lifecycle is set to true
     ros2_cmd = launch.substitutions.FindExecutable(name="ros2")
     process_configure_v2x_ros_driver_node = launch.actions.ExecuteProcess(
         cmd=[
@@ -94,6 +93,7 @@ def generate_launch_description():
     )
 
     activate_node_group_action = GroupAction(
+        # Node lifecycle activation called only if enable_v2x_driver_lifecycle is set to true
         condition=IfCondition(LaunchConfiguration('enable_v2x_driver_lifecycle')),
         actions=[
             # Set node lifecycle to configure after a delay
