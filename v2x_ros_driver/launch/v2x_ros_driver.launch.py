@@ -23,6 +23,8 @@ from launch_ros.descriptions import ComposableNode
 from launch.actions import DeclareLaunchArgument, Shutdown, ExecuteProcess, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from carma_ros2_utils.launch.get_current_namespace import GetCurrentNamespace
+from launch.conditions import IfCondition
+from launch.substitutions import PythonExpression
 
 import os
 
@@ -31,50 +33,6 @@ import os
 This file is can be used to launch the CARMA v2x_ros_driver_node.
   Though in carma-platform it may be launched directly from the base launch file.
 '''
-
-'''
-This function is used to call the v2x_ros_driver_node lifecycle transitions.
-  It will configure the node and then activate it.
-'''
-def transition_v2x_driver_lifecycle(context: LaunchContext, enable_v2x_driver_lifecycle_arg, configuration_delay_arg):
-
-    # Get enable_v2x_driver_lifecycle launch argument
-    enable_v2x_driver_lifecycle = context.perform_substitution(enable_v2x_driver_lifecycle_arg)
-
-    # Check if the lifecycle should be enabled
-    if enable_v2x_driver_lifecycle == 'true':
-        # Get the ROS2 executable
-        ros2_cmd = context.perform_substitution( launch.substitutions.FindExecutable(name='ros2'))
-
-        # Configuration delay
-        configuration_delay = context.perform_substitution(configuration_delay_arg)
-
-        # Process configuration
-        process_configure = ExecuteProcess(
-            cmd=[ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "configure"],
-        )
-
-        # Wait for configured amount of time before attempting to transition to configured state
-        configuration_trigger = launch.actions.TimerAction(
-            period=float(configuration_delay),
-            actions=[process_configure]
-        )
-
-        # Event handler for activation
-        configured_event_handler = launch.actions.RegisterEventHandler(
-            launch.event_handlers.OnExecutionComplete(
-                target_action=process_configure,
-                on_completion=[
-                    launch.actions.ExecuteProcess(
-                        cmd=[ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "activate"],
-                    )
-                ]
-            )
-        )
-
-        return [ configuration_trigger, configured_event_handler]
-    else:
-        return []
 
 def generate_launch_description():
 
@@ -126,11 +84,41 @@ def generate_launch_description():
         on_exit= Shutdown()
     )
 
+    ros2_cmd = launch.substitutions.FindExecutable(name="ros2")
+
+    process_configure_v2x_ros_driver_node = launch.actions.ExecuteProcess(
+        condition=IfCondition(
+            PythonExpression(["'", enable_v2x_driver_lifecycle, "' == 'true'"])
+        ),
+        cmd=[
+            ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "configure",
+        ],
+    )
+
+    configured_event_handler_v2x_ros_driver_node = launch.actions.RegisterEventHandler(
+        launch.event_handlers.OnExecutionComplete(
+            target_action=process_configure_v2x_ros_driver_node,
+            on_completion=[
+                launch.actions.ExecuteProcess(
+                    cmd=[
+                        ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "activate",
+                    ],
+                )
+            ],
+        )
+    )
+
+    configuration_trigger = launch.actions.TimerAction(
+        period=configuration_delay,
+        actions=[process_configure_v2x_ros_driver_node],
+    )
+
 
     return LaunchDescription([
         declare_log_level_arg,
         declare_configuration_delay_arg,
         declare_enable_v2x_driver_lifecycle,
         container,
-        OpaqueFunction(function=launch_v2x_lifecycle, args=[enable_v2x_driver_lifecycle, configuration_delay]),
+        configuration_trigger,
+        configured_event_handler_v2x_ros_driver_node
     ])
