@@ -226,7 +226,7 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
         }
     }
     // If message vector is smaller than 255 bytes, length field will be 1 octet. Additional check to make sure msg_size[2] exists.
-    else if (msg_vec.size() < 255 && msg_vec.size() > 3)
+    else if (msg_vec.size() < 255 && msg_vec.size() >= 3)
     {
         auto tmp_start_index = start_index + short_frame_;
         std::vector<uint8_t> short_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
