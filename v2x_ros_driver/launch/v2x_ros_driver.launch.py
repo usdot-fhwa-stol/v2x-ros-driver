@@ -79,7 +79,7 @@ def generate_launch_description():
     ros2_cmd = launch.substitutions.FindExecutable(name='ros2')
 
     process_configure = launch.actions.ExecuteProcess(
-        cmd=[ros2_cmd, "lifecycle", "set", "/v2x_ros_driver", "configure"],
+        cmd=[ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "configure"],
     )
 
     configuration_trigger = launch.actions.TimerAction(
@@ -92,7 +92,7 @@ def generate_launch_description():
     configured_event_handler = launch.actions.RegisterEventHandler(launch.event_handlers.OnExecutionComplete(
         target_action=process_configure, on_completion=[
             launch.actions.ExecuteProcess(
-                cmd=[ros2_cmd, "lifecycle", "set", "/v2x_ros_driver", "activate"],
+                cmd=[ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "activate"],
             )
         ])
     )
