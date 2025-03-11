@@ -19,7 +19,7 @@ if [[ ! -z "$ROS2_PACKAGES" ]]; then
     source /opt/carma/install/setup.bash
 else
     echo "Sourcing base image for full build..."
-    source /opt/ros/foxy/setup.bash
+    source /opt/ros/humble/setup.bash
 fi
 
 cd ~/
