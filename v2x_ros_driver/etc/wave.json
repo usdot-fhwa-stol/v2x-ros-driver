@@ -64,7 +64,7 @@
   },
   {
     "name" : "PSM",
-    "psid" : "0082",
+    "psid" : "0027",
     "dsrc_id" : "32",
     "channel" : "183",
     "priority" : "6"

@@ -84,12 +84,12 @@ def generate_launch_description():
         ],
         on_exit= Shutdown()
     )
-
     ros2_cmd = launch.substitutions.FindExecutable(name="ros2")
     process_configure_v2x_ros_driver_node = launch.actions.ExecuteProcess(
         cmd=[
             ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "configure",
         ],
+
     )
 
     activate_node_group_action = GroupAction(
@@ -116,6 +116,7 @@ def generate_launch_description():
                 )
             ),
         ]
+
     )
 
     return LaunchDescription([
