@@ -12,18 +12,20 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-from ament_index_python import get_package_share_directory
-from launch import LaunchDescription
-from launch_ros.actions import ComposableNodeContainer
-from launch_ros.descriptions import ComposableNode
-from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
-from launch.actions import Shutdown
 import launch.actions
 import launch.events
 import launch_ros.events.lifecycle
 import lifecycle_msgs.msg
+from ament_index_python import get_package_share_directory
+from launch import LaunchDescription, LaunchContext
+from launch_ros.actions import ComposableNodeContainer
+from launch_ros.descriptions import ComposableNode
+from launch.actions import DeclareLaunchArgument, Shutdown, ExecuteProcess, OpaqueFunction
+from launch.substitutions import LaunchConfiguration
 from carma_ros2_utils.launch.get_current_namespace import GetCurrentNamespace
+from launch.conditions import IfCondition
+from launch.substitutions import PythonExpression
+from launch.actions import GroupAction
 
 import os
 
@@ -38,11 +40,18 @@ def generate_launch_description():
     # Declare the log_level launch argument
     log_level = LaunchConfiguration('log_level')
     declare_log_level_arg = DeclareLaunchArgument(
-        name ='log_level', default_value='WARN')
+        name ='log_level', default_value='WARN',
+        description="The log level to use for the v2x_ros_driver_node")
 
     configuration_delay = LaunchConfiguration('configuration_delay')
     declare_configuration_delay_arg = DeclareLaunchArgument(
-        name ='configuration_delay', default_value='4.0')
+        name ='configuration_delay', default_value='2.0',
+        description="The delay in seconds before the v2x_ros_driver_node is configured")
+
+    enable_v2x_driver_lifecycle = LaunchConfiguration('enable_v2x_driver_lifecycle')
+    declare_enable_v2x_driver_lifecycle = DeclareLaunchArgument(
+        name ='enable_v2x_driver_lifecycle', default_value='False',
+        description="Enable the v2x_ros_driver_node lifecycle. If enabled manually transitions the node to active state. Default is false")
 
     # Get parameter file path
     param_file_path = os.path.join(
@@ -76,32 +85,43 @@ def generate_launch_description():
         on_exit= Shutdown()
     )
 
-    ros2_cmd = launch.substitutions.FindExecutable(name='ros2')
-
-    process_configure = launch.actions.ExecuteProcess(
-        cmd=[ros2_cmd, "lifecycle", "set", "/v2x_ros_driver", "configure"],
+    ros2_cmd = launch.substitutions.FindExecutable(name="ros2")
+    process_configure_v2x_ros_driver_node = launch.actions.ExecuteProcess(
+        cmd=[
+            ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "configure",
+        ],
     )
 
-    configuration_trigger = launch.actions.TimerAction(
-        period=configuration_delay,
+    activate_node_group_action = GroupAction(
+        # Node lifecycle activation called only if enable_v2x_driver_lifecycle is set to true
+        condition=IfCondition(LaunchConfiguration('enable_v2x_driver_lifecycle')),
         actions=[
-            process_configure,
+            # Set node lifecycle to configure after a delay
+            launch.actions.TimerAction(
+                period=LaunchConfiguration('configuration_delay'),
+                actions=[process_configure_v2x_ros_driver_node],
+            ),
+
+            # Activate node after configuration
+            launch.actions.RegisterEventHandler(
+                launch.event_handlers.OnExecutionComplete(
+                    target_action=process_configure_v2x_ros_driver_node,
+                    on_completion=[
+                        launch.actions.ExecuteProcess(
+                            cmd=[
+                                ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "activate",
+                            ],
+                        )
+                    ],
+                )
+            ),
         ]
     )
-
-    configured_event_handler = launch.actions.RegisterEventHandler(launch.event_handlers.OnExecutionComplete(
-        target_action=process_configure, on_completion=[
-            launch.actions.ExecuteProcess(
-                cmd=[ros2_cmd, "lifecycle", "set", "/v2x_ros_driver", "activate"],
-            )
-        ])
-    )
-
 
     return LaunchDescription([
         declare_log_level_arg,
         declare_configuration_delay_arg,
+        declare_enable_v2x_driver_lifecycle,
         container,
-        configuration_trigger,
-        configured_event_handler
+        activate_node_group_action
     ])
