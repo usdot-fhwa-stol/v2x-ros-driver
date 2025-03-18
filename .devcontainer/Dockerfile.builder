@@ -1,6 +1,6 @@
 # Run initial dependency installation
 ARG DOCKER_ORG="usdotfhwastoldev"
-ARG DOCKER_TAG="develop"
+ARG DOCKER_TAG="develop-humble"
 FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} AS base_image
 FROM base_image AS setup
 ARG GIT_BRANCH="develop"
