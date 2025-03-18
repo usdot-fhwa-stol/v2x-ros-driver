@@ -1,0 +1,31 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558 for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "cp -r /workspace/* /home/carma/src/ && /home/carma/src/docker/install.sh && cp -r /home/carma/install /opt/carma/install && sudo chmod -R +x /opt/carma/install",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "cd ~/ && rm -rf build",
+            "group": {
+                "kind": "build"
+            }
+        },
+        {
+            "label": "run",
+            "type": "shell",
+            "command": "source /opt/carma/install/setup.bash && ros2 launch /opt/carma/vehicle/config/drivers.launch.py drivers:=v2x_ros_driver && wait-for-it.sh localhost:11311 -- roslaunch v2x_ros_driver v2x_ros_driver.launch remap_ns:=/saxton_cav/drivers",
+            "group": {
+                "kind": "build"
+            }
+        }
+    ]
+}
