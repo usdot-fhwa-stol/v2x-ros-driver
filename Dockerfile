@@ -13,11 +13,11 @@
 #  the License.
 
 # Image build
-ARG DOCKER_ORG="usdotfhwastolcandidate"
-ARG DOCKER_TAG="test_run-humble"
+ARG DOCKER_ORG="usdotfhwastoldev"
+ARG DOCKER_TAG="sync_test_run-humble"
 FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} as base_image
 FROM base_image as setup
-ARG GIT_BRANCH="release/test_run"
+ARG GIT_BRANCH="sync_test_run"
 
 ARG ROS1_PACKAGES=""
 ENV ROS1_PACKAGES=${ROS1_PACKAGES}
