@@ -57,18 +57,18 @@
 #include <map>
 #include <set>
 
-#include "dsrc_driver/dsrc_client.h"
-#include "dsrc_driver/dsrc_config.h"
+#include "v2x_ros_driver/v2x_radio_client.h"
+#include "v2x_ros_driver/v2x_ros_driver_config.h"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
 
-namespace DSRCApplication
+namespace V2XDriverApplication
 {
 
 /**
- * @class DSRCApplication
- * @brief Is the class responsible for the ROS dsrc driver
+ * @class V2XDriverApplication
+ * @brief Is the class responsible for the ROS v2x radio driver
  */
 class Node : public carma_ros2_utils::CarmaLifecycleNode
 {
@@ -93,7 +93,7 @@ private:
 public:
 
     /**
-     * \brief Node constructor 
+     * \brief Node constructor
      */
     explicit Node(const rclcpp::NodeOptions &);
 
@@ -115,16 +115,16 @@ private:
 
     std::vector<WaveConfigStruct> wave_cfg_items_;
 
-    DSRCOBUClient dsrc_client_;
-    boost::system::error_code dsrc_client_error_;
+    V2XRadioClient v2x_radio_client_;
+    boost::system::error_code v2x_radio_client_error_;
     uint32_t queue_size_ = 100;
 
     /**
-     * \brief function callback for dynamic parameter updates
+     * @brief function callback for dynamic parameter updates
      */
     rcl_interfaces::msg::SetParametersResult parameter_update_callback(const std::vector<rclcpp::Parameter> &parameters);
-    
-    
+
+
     carma_ros2_utils::CallbackReturn handle_on_configure(const rclcpp_lifecycle::State &);
 
     /**
@@ -137,7 +137,7 @@ private:
     virtual void handle_on_shutdown();
 
     /**
-    * @brief Handles messages received from the DSRCDSRCOBUClient
+    * @brief Handles messages received from the V2XRadioClient
     *
     * Populates a ROS message with the contents of the incoming OBU message, and
     * publishes to the ROS 'inbound_binary_msg' topic.

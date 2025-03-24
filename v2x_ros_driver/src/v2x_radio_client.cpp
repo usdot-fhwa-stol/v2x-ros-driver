@@ -33,6 +33,7 @@
 */
 
 #include <iostream>
+#include <iomanip>
 #include <functional>
 #include <dirent.h>
 #include <rapidjson/document.h>
@@ -42,28 +43,28 @@
 #include <string>
 #include <vector>
 
-#include "dsrc_driver/dsrc_client.h"
-namespace DSRCApplication
+#include "v2x_ros_driver/v2x_radio_client.h"
+namespace V2XDriverApplication
 {
 
-DSRCOBUClient::DSRCOBUClient() :
+V2XRadioClient::V2XRadioClient() :
     running_(false)
 {}
 
 
-DSRCOBUClient::~DSRCOBUClient() {
+V2XRadioClient::~V2XRadioClient() {
     try{
         close();
     }catch(...){}
 }
 
-bool DSRCOBUClient::connect(const std::string &remote_address, unsigned short remote_port,
+bool V2XRadioClient::connect(const std::string &remote_address, unsigned short remote_port,
                             unsigned short local_port) {
     boost::system::error_code ignored_ec;
     return connect(remote_address, remote_port, local_port, ignored_ec);
 }
 
-bool DSRCOBUClient::connect(const std::string &remote_address,
+bool V2XRadioClient::connect(const std::string &remote_address,
                                 unsigned short remote_port,
                                  unsigned short local_port,
                                  boost::system::error_code &ec)
@@ -100,7 +101,7 @@ bool DSRCOBUClient::connect(const std::string &remote_address,
     }
     catch(std::exception e)
     {
-        std::cerr << "DSRCOBUClient::connect threw exception : " << e.what();
+        RCLCPP_ERROR_STREAM(logger_, "V2XRadioClient::connect threw exception : " << e.what());
         return false;
     };
 
@@ -127,7 +128,7 @@ bool DSRCOBUClient::connect(const std::string &remote_address,
     return true;
 }
 
-void DSRCOBUClient::close() {
+void V2XRadioClient::close() {
     if(!running_) return;
     running_ = false;
     work_.reset();
@@ -138,10 +139,10 @@ void DSRCOBUClient::close() {
     onDisconnect();
 }
 
-void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& data)
+void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& data)
 {
     auto & entry = *data;
-    // Valid message should begin with 2 bytes message ID and 1 byte length.
+    // Valid message should begin with 2 bytes message ID and 1-2 byte length.
     for (size_t i = 0; i < entry.size() - 3; i++) { // leave 3 bytes after (for lsb of id, length byte 1, and either message body or length byte 2)
         // Generate the 16-bit message id from two bytes, skip if it isn't a valid one
         uint16_t msg_id = (static_cast<uint16_t>(entry[i]) << 8) | static_cast<uint16_t>(entry[i + 1]);
@@ -157,7 +158,7 @@ void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& d
             // check for 0 length
             if (len_byte_1 == 0x00) { continue; }
         }
-            // length < 16384 encoded by 14 bits in 2 bytes (10xxxxxx xxxxxxxx)
+        // length < 16384 encoded by 14 bits in 2 bytes (10xxxxxx xxxxxxxx)
         else if ((len_byte_1 & 0x40) == 0x00) { //we know msb = 1, check that next bit is 0
             if (i + 3 < entry.size()) {
                 size_t len_byte_2 = entry[i + 3];
@@ -168,50 +169,133 @@ void DSRCOBUClient::process(const std::shared_ptr<const std::vector<uint8_t>>& d
         else {
             // TODO lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length
             // marker. It doesn't look like we'll be receiving anything that long
-            std::cerr << "DSRCOBUClient::process() : received a message with length field longer than 16383." << std::endl;
+            RCLCPP_WARN_STREAM(logger_, "V2XRadioClient::process() : discarding received message with length field longer than 16383.");
             continue;
         }
         if (len == -1) { continue; }
         // If the length makes sense bsmPub(fits in the buffer), copy out the message bytes and pass to the Application class
         if ((i + 1 + len + len_bytes) < entry.size()) {
-            // bool found_valid_msg = true;
+            // First step in checking for valid message. Message must begin with a valid MessageID. 
             if (!IsValidMsgID(std::to_string(msg_id))) { continue; }
+
             size_t start_index = i;
             size_t end_index = i + 2 + len + len_bytes; // includes 2 msgID bytes before message body
-            //this constructor has range [first, last) hence the + 1
+            // this constructor has range [first, last) hence the + 1
             std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.begin() + end_index);
-            onMessageReceived(msg_vec, msg_id);
-            break;
+
+            // Second check for a valid message. Checks MessageFrame length field against actual payload size.
+            if (!isValidMsgSize(msg_vec, start_index, end_index, entry))
+            {
+                RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
+                continue;
+            }
+            else
+            {
+                // Last check for a valid message. WSA uses same format as WAVE Short Message (WSM) and precurses the WSM in some cases.
+                // Make sure WSA is not accidentally detected before actual message. This is done by checking detected msg_id against list of PSIDs.
+                if (!isValidPSID(std::to_string(msg_id)))
+                {
+                    onMessageReceived(msg_vec, msg_id);
+                    break;
+                }
+                else
+                {
+                    RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
+                    continue;
+                }
+            }
         }
     }
 }
 
-bool DSRCOBUClient::IsValidMsgID(const std::string &msg_id)
+bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index, const std::vector<uint8_t> entry)
 {
-    if(this->wave_cfg_dsrc_ids_.empty())
+    // If message vector is larger than 255 bytes, length field will be 2 octets.
+    if (msg_vec.size() > 255) 
     {
-        if(this->wave_file_path.size() == 0)
+        auto tmp_start_index = start_index + long_frame_;
+        std::vector<uint8_t> long_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
+        auto msg_size = (static_cast<uint16_t>(msg_vec[2]) << 8) | msg_vec[3];
+        if (msg_size == long_vec.size())
+            {
+                return true;
+            }
+        else 
         {
             return false;
         }
-        loadWaveConfigDsrcIds(this->wave_file_path);
-    }    
-
-    for (const auto &dsrc_id : this->wave_cfg_dsrc_ids_) 
+    }
+    // If message vector is smaller than 255 bytes, length field will be 1 octet. Additional check to make sure msg_size[2] exists.
+    else if (msg_vec.size() < 255 && msg_vec.size() >= 3)
     {
-        if(msg_id == dsrc_id)
+        auto tmp_start_index = start_index + short_frame_;
+        std::vector<uint8_t> short_vec(entry.begin() + tmp_start_index, entry.begin() + end_index);
+        auto msg_size = msg_vec[2];
+        if (msg_size == short_vec.size())
+            {
+                return true;
+            }
+        else
+        {
+            return false;
+        }
+    }
+    else { return false; }
+}
+
+bool V2XRadioClient::isValidPSID(const std::string &msg_id)
+{
+    if (this->wave_cfg_psids_.empty())
+    {
+        if (this->wave_file_path.empty())
+        {
+            return false;
+        }
+        loadWaveConfigIds(this->wave_file_path);
+    }
+
+    for (const auto &psid : this->wave_cfg_psids_) 
+    {
+        // Convert the hex string to an integer
+        int psid_value = std::stoi(psid, nullptr, 16);
+        // Convert the integer to its decimal string representation
+        std::string psidInt = std::to_string(psid_value);
+        if (msg_id == psidInt)
+        {
             return true;
+        }
     }
     return false;
 }
 
-void DSRCOBUClient::set_wave_file_path(const std::string& path)
+bool V2XRadioClient::IsValidMsgID(const std::string &msg_id)
+{
+    if (this->wave_cfg_dsrc_ids_.empty())
+    {
+        if (this->wave_file_path.size() == 0)
+        {
+            return false;
+        }
+        loadWaveConfigIds(this->wave_file_path);
+    }
+
+    for (const auto &dsrc_id : this->wave_cfg_dsrc_ids_)
+    {
+        if (msg_id == dsrc_id)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void V2XRadioClient::set_wave_file_path(const std::string& path)
 {
     this->wave_file_path = path;
 }
 
-void DSRCOBUClient::loadWaveConfigDsrcIds(const std::string &fileName)
-{    
+void V2XRadioClient::loadWaveConfigIds(const std::string &fileName)
+{
     const char* schema = "{\n"
                         " \"$schema\":\"http://json-schema.org/draft-06/schema\",\n"
                         " \"title\":\"Wave Config Schema\",\n"
@@ -252,14 +336,14 @@ void DSRCOBUClient::loadWaveConfigDsrcIds(const std::string &fileName)
     }
     catch (const std::ifstream::failure& e)
     {
-        std::cout<<"Unable to open file : " << fileName << ", exception: " << e.what();
+        RCLCPP_ERROR_STREAM(logger_, "Unable to open file : " << fileName << ", exception: " << e.what());
         return ;
     }
 
     rapidjson::Document sd;
     if(sd.Parse(schema).HasParseError())
     {
-        std::cout<<"Invalid Wave Config Schema";
+        RCLCPP_ERROR_STREAM(logger_, "Invalid Wave Config Schema");
         return ;
     }
 
@@ -268,14 +352,14 @@ void DSRCOBUClient::loadWaveConfigDsrcIds(const std::string &fileName)
     rapidjson::IStreamWrapper isw(file);
     if(doc.ParseStream(isw).HasParseError())
     {
-        std::cout<<"Error Parsing Wave Config";
+        RCLCPP_ERROR_STREAM(logger_, "Error Parsing Wave Config");
         return ;
     }
 
     rapidjson::SchemaValidator validator(schemaDocument);
     if(!doc.Accept(validator))
     {
-        std::cout<<"Wave Config improperly formatted";
+        RCLCPP_ERROR_STREAM(logger_, "Wave Config improperly formatted");
         return;
     }
 
@@ -283,10 +367,12 @@ void DSRCOBUClient::loadWaveConfigDsrcIds(const std::string &fileName)
     {
         auto entry = it.GetObject();
         wave_cfg_dsrc_ids_.emplace_back(entry["dsrc_id"].GetString());
+        wave_cfg_psids_.emplace_back(entry["psid"].GetString());
     }
 }
 
-bool DSRCOBUClient::sendDsrcMessage(const std::shared_ptr<std::vector<uint8_t>>&message) {
+bool V2XRadioClient::sendV2xMessage(const std::shared_ptr<std::vector<uint8_t>> &message)
+{
     if(!running_) return false;
     try {
         output_strand_->post([this,message]()
