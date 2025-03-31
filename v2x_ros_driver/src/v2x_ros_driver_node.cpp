@@ -152,7 +152,7 @@ void Node::onMessageReceivedHandler(const std::vector<uint8_t> &data, uint16_t i
     // Publish it
     comms_pub_->publish(msg);
 
-    RCLCPP_INFO_STREAM(this->get_logger(),"Application received Data: " << data.size() << " bytes, message: " << uint8_vector_to_hex_string(data));
+    RCLCPP_DEBUG_STREAM(this->get_logger(),"Application received Data: " << data.size() << " bytes, message: " << uint8_vector_to_hex_string(data));
 }
 
 /**

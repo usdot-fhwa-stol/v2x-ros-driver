@@ -134,15 +134,13 @@ public:
      * @param end_index Ending index for payload within message vector
      * @param entry Recevied data reference used to generate test vectors
      */
-    bool isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, const std::vector<uint8_t> entry);
+    bool isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index, const std::vector<uint8_t> entry);
     
     /**
      * @brief Checks msg_id against Provider Service ID (PSID) list to make sure a Wireless Access in Vehicular Environments (WAVE) Service Advertisement (WSA) with valid PSID is not accidentally used instead of MessageFrame
      * @param msg_id Message ID under test
      */
     bool isValidPSID(const std::string& msg_id);
-
-    void printVectorHelper(const std::vector<uint8_t>& vec);
 
 private:
     rclcpp::Logger logger_{rclcpp::get_logger("v2x_radio_client")};
@@ -166,7 +164,6 @@ private:
     static const int long_frame_ = 4;
     /** @brief WAVE Service Advertisement (WSA) frame size (bytes) for J2735 payloads <127 octets. IEEE 1609.3 (2020) - 8.1.3 */
     static const int short_frame_ = 3;
-    int count = 0;
     
     /**
     * @brief Maintains the process thread.
