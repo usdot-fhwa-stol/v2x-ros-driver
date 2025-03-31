@@ -139,60 +139,25 @@ void V2XRadioClient::close() {
     onDisconnect();
 }
 
-void V2XRadioClient::printVectorHelper(const std::vector<uint8_t>& vec)
-{
-    std::ostringstream oss;
-    oss << "[";
-    for (size_t i = 0; i < vec.size(); ++i) {
-        oss << static_cast<int>(vec[i]);
-        if (i < vec.size() - 1) {
-            oss << ", ";
-        }
-    }
-    oss << "]";
-    RCLCPP_INFO_STREAM(logger_, "message vector: " << oss.str());
-}
-
 void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& data)
 {
     auto & entry = *data;
-    // Valid message should begin with 2 bytes message ID and 1-2 byte length.
     for (size_t i = 0; i < entry.size() - 3; i++) { // leave 3 bytes after (for lsb of id, length byte 1, and either message body or length byte 2)
         // Generate the 16-bit message id from two bytes, skip if it isn't a valid one
         uint16_t msg_id = (static_cast<uint16_t>(entry[i]) << 8) | static_cast<uint16_t>(entry[i + 1]);
         if (!IsValidMsgID(std::to_string(msg_id))) { continue; }
 
-        // // Parse the length, check it doesn't run over
-        // size_t len = 0;
-        // size_t len_byte_1 = entry[i + 2];
-        // int len_bytes = 0;
-        // // length < 128 encoded by single byte with msb set to 0
-        // if ((len_byte_1 & 0x80 ) == 0x00) {
-        //     len = static_cast<size_t>(len_byte_1);
-        //     len_bytes = 1;
-        //     // check for 0 length
-        //     if (len_byte_1 == 0x00) { continue; }
-        // }
-        // // length < 16384 encoded by 14 bits in 2 bytes (10xxxxxx xxxxxxxx)
-        // else if ((len_byte_1 & 0x40) == 0x00) { //we know msb = 1, check that next bit is 0
-        //     if (i + 3 < entry.size()) {
-        //         size_t len_byte_2 = entry[i + 3];
-        //         len = ((len_byte_1 & 0x3f) << 8) | len_byte_2;
-        //         len_bytes = 2;
-        //     }
-        // }
-        // else {
-        //     // TODO lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length
-        //     // marker. It doesn't look like we'll be receiving anything that long
-        //     RCLCPP_WARN_STREAM(logger_, "V2XRadioClient::process() : discarding received message with length field longer than 16383.");
-        //     continue;
-        // }
-        // if (len == -1) { continue; }
-
         if ((i + short_frame_) < entry.size()) {
             size_t start_index = i;
             std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.end());
-            printVectorHelper(msg_vec);
+
+            // TODO lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length
+            // marker. It doesn't look like we'll be receiving anything that long
+            if (msg_vec.size() > 16383)
+            {
+                RCLCPP_WARN_STREAM(logger_, "V2XRadioClient::process() : discarding received message with length field longer than 16383.");
+                continue;
+            }
 
             // Second check for a valid message. Checks MessageFrame length field against actual payload size.
             if (!isValidMsgSize(msg_vec, start_index, entry))
@@ -206,7 +171,6 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
                 // Make sure WSA is not accidentally detected before actual message. This is done by checking detected msg_id against list of PSIDs.
                 if (!isValidPSID(std::to_string(msg_id)))
                 {
-                    count++;
                     onMessageReceived(msg_vec, msg_id);
                     break;
                 }
@@ -222,14 +186,12 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
 
 bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, const std::vector<uint8_t> entry)
 {
-    RCLCPP_INFO_STREAM(logger_, "msg_vec size: " << msg_vec.size());
-    // If message vector is larger than 255 bytes, length field will be 2 octets.
-    if (msg_vec.size() > 255) 
+    // If message vector is 255 bytes (128 octets) or larger, length field will be 2 octets.
+    if (msg_vec.size() > 127) 
     {
         auto tmp_start_index = start_index + long_frame_;
         std::vector<uint8_t> long_vec(entry.begin() + tmp_start_index, entry.end());
-        auto msg_size = (static_cast<uint16_t>(msg_vec[2]) << 8) | msg_vec[3];
-        RCLCPP_INFO_STREAM(logger_, "long_vec size: " << msg_size);
+        auto msg_size = (static_cast<uint16_t>(msg_vec[2] & 0x7F) << 8) | msg_vec[3];
         if (msg_size == long_vec.size())
             {
                 return true;
@@ -239,13 +201,12 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
             return false;
         }
     }
-    // If message vector is smaller than 255 bytes, length field will be 1 octet. Additional check to make sure msg_size[2] exists.
-    else if (msg_vec.size() < 255 && msg_vec.size() >= 3)
+    // If message vector is smaller than 255 bytes (128 octets), length field will be 1 octet. Additional check to make sure msg_size[2] exists.
+    else if (msg_vec.size() < 128 && msg_vec.size() >= 3)
     {
         auto tmp_start_index = start_index + short_frame_;
         std::vector<uint8_t> short_vec(entry.begin() + tmp_start_index, entry.end());
         auto msg_size = msg_vec[2];
-        RCLCPP_INFO_STREAM(logger_, "short_vec size: " << msg_size);
         if (msg_size == short_vec.size())
             {
                 return true;

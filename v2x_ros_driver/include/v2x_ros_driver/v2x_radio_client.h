@@ -131,7 +131,6 @@ public:
      * @brief Checks actual message vector size against size specified in MessageFrame
      * @param msg_vec Full message vector under test
      * @param start_index Starting index for detected payload within message vector
-     * @param end_index Ending index for payload within message vector
      * @param entry Recevied data reference used to generate test vectors
      */
     bool isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, const std::vector<uint8_t> entry);
@@ -141,8 +140,6 @@ public:
      * @param msg_id Message ID under test
      */
     bool isValidPSID(const std::string& msg_id);
-
-    void printVectorHelper(const std::vector<uint8_t>& vec);
 
 private:
     rclcpp::Logger logger_{rclcpp::get_logger("v2x_radio_client")};
@@ -164,9 +161,8 @@ private:
 
     /** @brief WAVE Service Advertisement (WSA) frame size (bytes) for J2735 payloads >127 octets. IEEE 1609.3 (2020) - 8.1.3 */
     static const int long_frame_ = 4;
-    /** @brief WAVE Service Advertisement (WSA) frame size (bytes) for J2735 payloads <127 octets. IEEE 1609.3 (2020) - 8.1.3 */
+    /** @brief WAVE Service Advertisement (WSA) frame size (bytes) for J2735 payloads <128 octets. IEEE 1609.3 (2020) - 8.1.3 */
     static const int short_frame_ = 3;
-    int count = 0;
     
     /**
     * @brief Maintains the process thread.
