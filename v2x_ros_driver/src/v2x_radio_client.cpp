@@ -146,7 +146,7 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &
     // Check if data is empty or smaller than the minimum required bytes
     if (entry.empty() || entry.size() < 3)
     {
-        RCLCPP_DEBUG_STREAM(logger_, "Received empty or insufficient data, nothing to process.");
+        RCLCPP_WARN_STREAM(logger_, "Received empty or insufficient data, nothing to process.");
         return;
     }
 
@@ -163,14 +163,14 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &
             // marker. It doesn't look like we'll be receiving anything that long
             if (msg_vec.size() > 16383)
             {
-                RCLCPP_DEBUG_STREAM(logger_, "V2XRadioClient::process() : discarding received message with length field longer than 16383.");
+                RCLCPP_WARN_STREAM(logger_, "V2XRadioClient::process() : discarding received message with length field longer than 16383.");
                 break;
             }
 
             // Second check for a valid message. Checks MessageFrame length field against actual payload size.
             if (!isValidMsgSize(msg_vec, start_index, entry))
             {
-                RCLCPP_DEBUG_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
+                RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
                 continue;
             }
             else
@@ -184,7 +184,7 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &
                 }
                 else
                 {
-                    RCLCPP_DEBUG_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
+                    RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
                     continue;
                 }
             }
