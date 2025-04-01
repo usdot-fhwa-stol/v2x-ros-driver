@@ -141,7 +141,7 @@ void Node::onMessageReceivedHandler(const std::vector<uint8_t> &data, uint16_t i
     // Create and populate the message
     auto it = std::find_if(wave_cfg_items_.begin(),wave_cfg_items_.end(),[id](const WaveConfigStruct& entry)
                                                                             {
-                                                                               return entry.dsrc_id == std::to_string(id);
+                                                                               return entry.dsrc_msg_id == std::to_string(id);
                                                                             });
 
     carma_driver_msgs::msg::ByteArray msg;
@@ -180,8 +180,8 @@ std::vector<uint8_t> Node::packMessage(carma_driver_msgs::msg::ByteArray message
         cfg.name = message.message_type;
         cfg.channel = "CCH";  //Assuming the Default channel is not the safety related info that would be in a BSM message
         cfg.priority = "1";
-        cfg.dsrc_id = std::to_string((message.content[0] << 8 ) | message.content[1]);
-        cfg.psid = cfg.dsrc_id;
+        cfg.dsrc_msg_id = std::to_string((message.content[0] << 8 ) | message.content[1]);
+        cfg.psid = cfg.dsrc_msg_id;
     }
     else
     {
@@ -338,7 +338,7 @@ void Node::loadWaveConfig(const std::string &fileName)
                         "        \"description\": \"psid assigned to message type in decimal\",\n"
                         "        \"type\": \"string\"\n"
                         "      },\n"
-                        "      \"dsrc_id\": {\n"
+                        "      \"dsrc_msg_id\": {\n"
                         "        \"description\": \"J2735 DSRC id assigned to message type in decimal\",\n"
                         "        \"type\": \"string\"\n"
                         "      },\n"
@@ -351,7 +351,7 @@ void Node::loadWaveConfig(const std::string &fileName)
                         "        \"type\":\"string\"\n"
                         "      }\n"
                         "    },\n"
-                        "    \"required\":[\"name\",\"psid\",\"dsrc_id\",\"channel\",\"priority\"]"
+                        "    \"required\":[\"name\",\"psid\",\"dsrc_msg_id\",\"channel\",\"priority\"]"
                         "  }\n"
                         "}\n";
 
@@ -394,7 +394,7 @@ void Node::loadWaveConfig(const std::string &fileName)
         auto entry = it.GetObject();
         wave_cfg_items_.emplace_back(entry["name"].GetString(),
                                      entry["psid"].GetString(),
-                                     entry["dsrc_id"].GetString(),
+                                     entry["dsrc_msg_id"].GetString(),
                                      entry["channel"].GetString(),
                                      entry["priority"].GetString());
 

@@ -2,91 +2,91 @@
   {
     "name" : "BSM",
     "psid" : "0020",
-    "dsrc_id" : "20",
+    "dsrc_msg_id" : "20",
     "channel" : "183",
     "priority" :  "6"
   },
   {
     "name" : "TIM",
     "psid" : "0083",
-    "dsrc_id" : "31",
-    "channel" : "CCH",
+    "dsrc_msg_id" : "31",
+    "channel" : "183",
     "priority" : "3"
   },
   {
     "name" : "MAP",
     "psid" : "0082",
-    "dsrc_id" : "18",
+    "dsrc_msg_id" : "18",
     "channel" : "183",
     "priority" : "3"
   },
   {
     "name" : "SPAT",
     "psid" : "0082",
-    "dsrc_id" : "19",
+    "dsrc_msg_id" : "19",
     "channel" : "183",
     "priority" : "3"
   },
   {
     "name" : "MobilityRequest",
     "psid" : "BFEE",
-    "dsrc_id" : "240",
+    "dsrc_msg_id" : "240",
     "channel" : "183",
     "priority" : "6"
   },
   {
     "name" : "MobilityResponse",
     "psid" : "BFEE",
-    "dsrc_id" : "241",
+    "dsrc_msg_id" : "241",
     "channel" : "183",
     "priority" : "6"
   },
   {
     "name" : "MobilityOperation",
     "psid" : "BFEE",
-    "dsrc_id" : "243",
+    "dsrc_msg_id" : "243",
     "channel" : "183",
     "priority" : "6"
   },
   {
     "name" : "MobilityPath",
     "psid" : "BFEE",
-    "dsrc_id" : "242",
+    "dsrc_msg_id" : "242",
     "channel" : "183",
     "priority" : "6"
   },
   {
     "name" : "TrafficControlRequest",
     "psid" : "8003",
-    "dsrc_id" : "244",
+    "dsrc_msg_id" : "244",
     "channel" : "183",
     "priority" : "6"
   },
   {
     "name" : "PSM",
     "psid" : "0027",
-    "dsrc_id" : "32",
+    "dsrc_msg_id" : "32",
     "channel" : "183",
     "priority" : "6"
   },
   {
     "name" : "TrafficControlMessage",
     "psid" : "8003",
-    "dsrc_id" : "245",
+    "dsrc_msg_id" : "245",
     "channel" : "183",
     "priority" : "6"
   },
   {
     "name" : "EmergencyVehicleResponse",
     "psid" : "8005",
-    "dsrc_id" : "246",
+    "dsrc_msg_id" : "246",
     "channel" : "183",
     "priority" : "6"
   },
   {
     "name" : "EmergencyVehicleAck",
     "psid" : "8005",
-    "dsrc_id" : "247",
+    "dsrc_msg_id" : "247",
     "channel" : "183",
     "priority" : "6"
   }

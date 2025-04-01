@@ -106,7 +106,7 @@ bool V2XRadioClient::connect(const std::string &remote_address,
     };
 
     //connect signals
-    udp_listener_->onReceive.connect([this](const std::shared_ptr<const std::vector<uint8_t>>& data){process(data);});
+    udp_listener_->onReceive.connect([this](const std::shared_ptr<const std::vector<uint8_t>> &data){process(data);});
 
     udp_out_socket_.reset(new boost::asio::ip::udp::socket(*io_,remote_udp_ep_.protocol()));
 
@@ -139,11 +139,19 @@ void V2XRadioClient::close() {
     onDisconnect();
 }
 
-void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& data)
+void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &data)
 {
     auto & entry = *data;
+
+    // Check if data is empty or smaller than the minimum required bytes
+    if (entry.empty() || entry.size() < 3)
+    {
+        RCLCPP_DEBUG_STREAM(logger_, "Received empty or insufficient data, nothing to process.");
+        return;
+    }
+
     for (size_t i = 0; i < entry.size() - 3; i++) { // leave 3 bytes after (for lsb of id, length byte 1, and either message body or length byte 2)
-        // Generate the 16-bit message id from two bytes, skip if it isn't a valid one
+        // Generate a 16-bit message id from two bytes, e.g. [0 20 ...] = 0x0014, skip if it isn't a valid one
         uint16_t msg_id = (static_cast<uint16_t>(entry[i]) << 8) | static_cast<uint16_t>(entry[i + 1]);
         if (!IsValidMsgID(std::to_string(msg_id))) { continue; }
 
@@ -155,14 +163,14 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
             // marker. It doesn't look like we'll be receiving anything that long
             if (msg_vec.size() > 16383)
             {
-                RCLCPP_WARN_STREAM(logger_, "V2XRadioClient::process() : discarding received message with length field longer than 16383.");
-                continue;
+                RCLCPP_DEBUG_STREAM(logger_, "V2XRadioClient::process() : discarding received message with length field longer than 16383.");
+                break;
             }
 
             // Second check for a valid message. Checks MessageFrame length field against actual payload size.
             if (!isValidMsgSize(msg_vec, start_index, entry))
             {
-                RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
+                RCLCPP_DEBUG_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
                 continue;
             }
             else
@@ -176,7 +184,7 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
                 }
                 else
                 {
-                    RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
+                    RCLCPP_DEBUG_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
                     continue;
                 }
             }
@@ -184,13 +192,19 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>>& 
     }
 }
 
-bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, const std::vector<uint8_t> entry)
+bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> &msg_vec, size_t start_index, const std::vector<uint8_t> &entry)
 {
-    // If message vector is 255 bytes (128 octets) or larger, length field will be 2 octets.
+    // If message vector is 128 bytes or larger, length field will be 2 bytes.
     if (msg_vec.size() > 127) 
     {
         auto tmp_start_index = start_index + long_frame_;
         std::vector<uint8_t> long_vec(entry.begin() + tmp_start_index, entry.end());
+        // Allows creation of msg_size from two bytes. e.g., [0 20 129 9 ...], we want to combine bytes 2 and 3 from this vector to create msg_size = 0x0109.
+        // msg_vec[2] is hex value of 129 (0x81) and msg_vec[3] is hex value of 9 (0x09).
+        // Per IEEE 1609.3, we will always have a value of "8" as the most significant value in the message size, if payload size > 128 bytes.
+        // So, we bitwise AND (&) the value of msg_vec[2] with 0x7f (01111111) to drop the most significant bit, turning 0x81 (10000001) to 0x01 (00000001).
+        // Because we need to merge two bytes, we cast the values to an unsigned 16-bit integer.
+        // First byte is shifted to the left 8 bits (0x0001 is now 0x0100), followed by a bitwise OR (|) with msg_vec[3], combining 0x0100 and 0x0009 to create 0x0109.
         auto msg_size = (static_cast<uint16_t>(msg_vec[2] & 0x7F) << 8) | msg_vec[3];
         if (msg_size == long_vec.size())
             {
@@ -201,7 +215,7 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t s
             return false;
         }
     }
-    // If message vector is smaller than 255 bytes (128 octets), length field will be 1 octet. Additional check to make sure msg_size[2] exists.
+    // If message vector is smaller than 128 bytes, length field will be 1 byte. Additional check to make sure msg_vec[2] exists.
     else if (msg_vec.size() < 128 && msg_vec.size() >= 3)
     {
         auto tmp_start_index = start_index + short_frame_;
@@ -246,7 +260,7 @@ bool V2XRadioClient::isValidPSID(const std::string &msg_id)
 
 bool V2XRadioClient::IsValidMsgID(const std::string &msg_id)
 {
-    if (this->wave_cfg_dsrc_ids_.empty())
+    if (this->wave_cfg_dsrc_msg_ids_.empty())
     {
         if (this->wave_file_path.size() == 0)
         {
@@ -255,9 +269,9 @@ bool V2XRadioClient::IsValidMsgID(const std::string &msg_id)
         loadWaveConfigIds(this->wave_file_path);
     }
 
-    for (const auto &dsrc_id : this->wave_cfg_dsrc_ids_)
+    for (const auto &dsrc_msg_id : this->wave_cfg_dsrc_msg_ids_)
     {
-        if (msg_id == dsrc_id)
+        if (msg_id == dsrc_msg_id)
         {
             return true;
         }
@@ -265,7 +279,7 @@ bool V2XRadioClient::IsValidMsgID(const std::string &msg_id)
     return false;
 }
 
-void V2XRadioClient::set_wave_file_path(const std::string& path)
+void V2XRadioClient::set_wave_file_path(const std::string &path)
 {
     this->wave_file_path = path;
 }
@@ -288,8 +302,8 @@ void V2XRadioClient::loadWaveConfigIds(const std::string &fileName)
                         "        \"description\": \"psid assigned to message type in decimal\",\n"
                         "        \"type\": \"string\"\n"
                         "      },\n"
-                        "      \"dsrc_id\": {\n"
-                        "        \"description\": \"J2735 DSRC id assigned to message type in decimal\",\n"
+                        "      \"dsrc_msg_id\": {\n"
+                        "        \"description\": \"J2735 DSRCmsgID assigned to message type in decimal\",\n"
                         "        \"type\": \"string\"\n"
                         "      },\n"
                         "      \"channel\": {\n"
@@ -301,7 +315,7 @@ void V2XRadioClient::loadWaveConfigIds(const std::string &fileName)
                         "        \"type\":\"string\"\n"
                         "      }\n"
                         "    },\n"
-                        "    \"required\":[\"name\",\"psid\",\"dsrc_id\",\"channel\",\"priority\"]"
+                        "    \"required\":[\"name\",\"psid\",\"dsrc_msg_id\",\"channel\",\"priority\"]"
                         "  }\n"
                         "}\n";
 
@@ -310,7 +324,7 @@ void V2XRadioClient::loadWaveConfigIds(const std::string &fileName)
     {
         file.open(fileName);
     }
-    catch (const std::ifstream::failure& e)
+    catch (const std::ifstream::failure &e)
     {
         RCLCPP_ERROR_STREAM(logger_, "Unable to open file : " << fileName << ", exception: " << e.what());
         return ;
@@ -342,7 +356,7 @@ void V2XRadioClient::loadWaveConfigIds(const std::string &fileName)
     for(auto& it : doc.GetArray())
     {
         auto entry = it.GetObject();
-        wave_cfg_dsrc_ids_.emplace_back(entry["dsrc_id"].GetString());
+        wave_cfg_dsrc_msg_ids_.emplace_back(entry["dsrc_msg_id"].GetString());
         wave_cfg_psids_.emplace_back(entry["psid"].GetString());
     }
 }
