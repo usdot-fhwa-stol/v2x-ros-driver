@@ -116,7 +116,7 @@ TEST(V2XRadioClient,testIsValidMsgSize)
     {
         std::vector<uint8_t> msg_vec = {0, 1};  // Only 2 bytes
         std::vector<uint8_t> entry = {0, 1};
-        ASSERT_FALSE(client.isValidMsgSize(msg_vec, start_index, entry));
+        ASSERT_FALSE(v2x_radio_client_.isValidMsgSize(msg_vec, start_index, entry));
     }
 
     // Case 2: Short frame (msg_vec.size() < 128)
@@ -131,13 +131,13 @@ TEST(V2XRadioClient,testIsValidMsgSize)
         {0, 32, 59, 3, 128, 56, 0, 20, 53, 84, 110, 235, 28, 175, 212, 133, 230, 190, 195, 243, 28, 
             231, 55, 89, 11, 207, 4, 132, 128, 0, 112, 0, 128, 0, 253, 125, 55, 208, 0, 127, 255, 0, 
             0, 101, 144, 160, 0, 56, 192, 0, 255, 117, 63, 233, 47, 1, 255, 250, 255, 254, 200, 0};
-        ASSERT_TRUE(client.isValidMsgSize(msg_vec, start_index, valid_entry));
+        ASSERT_TRUE(v2x_radio_client_.isValidMsgSize(msg_vec, start_index, valid_entry));
 
         std::vector<uint8_t> invalid_entry = 
         {1, 2, 32, 59, 3, 128, 56, 0, 20, 53, 84, 110, 235, 28, 175, 212, 133, 230, 190, 195, 243, 28, 
             231, 55, 89, 11, 207, 4, 132, 128, 0, 112, 0, 128, 0, 253, 125, 55, 208, 0, 127, 255, 0, 
             0, 101, 144, 160, 0, 56, 192, 0, 255, 117, 63, 233, 47, 1, 255, 250, 255, 254, 200, 0};
-        ASSERT_FALSE(client.isValidMsgSize(msg_vec, start_index, invalid_entry));
+        ASSERT_FALSE(v2x_radio_client_.isValidMsgSize(msg_vec, start_index, invalid_entry));
     }
 
     // Case 3: Long frame (msg_vec.size() > 127)
@@ -170,7 +170,7 @@ TEST(V2XRadioClient,testIsValidMsgSize)
             195, 59, 8, 104, 128, 114, 144, 0, 0, 0, 2, 53, 34, 195, 12, 223, 36, 36, 130, 12, 128, 0, 0, 0, 12, 205, 205, 240, 16, 207, 49, 224, 44, 26, 0, 2, 
             2, 137, 3, 217, 0, 0, 0, 0, 25, 172, 25, 132, 33, 165, 101, 209, 88, 60, 0, 4, 4, 44, 56, 128, 2, 2, 68, 4, 92, 128, 0, 0, 0, 25, 154, 30, 32, 33, 
             79, 98, 32};
-        ASSERT_TRUE(client.isValidMsgSize(msg_vec, start_index, valid_entry));
+        ASSERT_TRUE(v2x_radio_client_.isValidMsgSize(msg_vec, start_index, valid_entry));
 
         std::vector<uint8_t> invalid_entry =
         {1, 2, 18, 129, 145, 56, 0, 48, 0, 33, 136, 122, 1, 70, 103, 163, 112, 58, 131, 73, 205, 17, 244, 2, 220, 40, 32, 8, 36, 0, 0, 0, 0, 175, 147, 193, 130, 
@@ -185,7 +185,7 @@ TEST(V2XRadioClient,testIsValidMsgSize)
             195, 59, 8, 104, 128, 114, 144, 0, 0, 0, 2, 53, 34, 195, 12, 223, 36, 36, 130, 12, 128, 0, 0, 0, 12, 205, 205, 240, 16, 207, 49, 224, 44, 26, 0, 2, 
             2, 137, 3, 217, 0, 0, 0, 0, 25, 172, 25, 132, 33, 165, 101, 209, 88, 60, 0, 4, 4, 44, 56, 128, 2, 2, 68, 4, 92, 128, 0, 0, 0, 25, 154, 30, 32, 33, 
             79, 98, 32};
-        ASSERT_FALSE(client.isValidMsgSize(msg_vec, start_index, invalid_entry));
+        ASSERT_FALSE(v2x_radio_client_.isValidMsgSize(msg_vec, start_index, invalid_entry));
     }
 }
 
