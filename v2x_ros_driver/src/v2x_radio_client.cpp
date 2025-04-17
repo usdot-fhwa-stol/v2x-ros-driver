@@ -141,7 +141,7 @@ void V2XRadioClient::close() {
 
 void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &data)
 {
-    auto & entry = *data;
+    auto &entry = *data;
 
     // Check if data is empty or smaller than the minimum required bytes
     if (entry.empty() || entry.size() < 3)
@@ -150,13 +150,14 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &
         return;
     }
 
-    for (size_t i = 0; i < entry.size() - 3; i++) { // leave 3 bytes after (for lsb of id, length byte 1, and either message body or length byte 2)
+    for (size_t i = 0; i < entry.size() - 3; i++) 
+    {   // Leave 3 bytes after (for lsb of id, length byte 1, and either message body or length byte 2)
         // Generate a 16-bit message id from two bytes, e.g. [0 20 ...] = 0x0014, skip if it isn't a valid one
-        uint16_t msg_id = (static_cast<uint16_t>(entry[i]) << 8) | static_cast<uint16_t>(entry[i + 1]);
+        auto msg_id = (static_cast<uint16_t>(entry[i]) << 8) | static_cast<uint16_t>(entry[i + 1]);
         if (!IsValidMsgID(std::to_string(msg_id))) { continue; }
 
         if ((i + short_frame_) < entry.size()) {
-            size_t start_index = i;
+            auto start_index = i;
             std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.end());
 
             // TODO lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length
@@ -175,17 +176,25 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &
             }
             else
             {
-                // Last check for a valid message. WSA uses same format as WAVE Short Message (WSM) and precurses the WSM in some cases.
-                // Make sure WSA is not accidentally detected before actual message. This is done by checking detected msg_id against list of PSIDs.
-                if (!isValidPSID(std::to_string(msg_id)))
+                // Check for a valid message. (WSMP) T-Header uses same format as WAVE Short Message (WSM) and precurses the WSM in some cases.
+                // Make sure T-Header is not accidentally detected before actual message. This is done by checking detected msg_id against list of PSIDs.
+                if (!isPossiblePSID(std::to_string(msg_id)))
                 {
                     onMessageReceived(msg_vec, msg_id);
                     break;
                 }
                 else
                 {
-                    RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
-                    continue;
+                    if (!isValidPSID(start_index, entry))
+                    {
+                        onMessageReceived(msg_vec, msg_id);
+                        break;
+                    }
+                    else
+                    {
+                        RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
+                        continue;
+                    }
                 }
             }
         }
@@ -233,7 +242,7 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> &msg_vec, size_t 
     else { return false; }
 }
 
-bool V2XRadioClient::isValidPSID(const std::string &msg_id)
+bool V2XRadioClient::isPossiblePSID(const std::string &msg_id)
 {
     if (this->wave_cfg_psids_.empty())
     {
@@ -247,12 +256,39 @@ bool V2XRadioClient::isValidPSID(const std::string &msg_id)
     for (const auto &psid : this->wave_cfg_psids_) 
     {
         // Convert the hex string to an integer
-        int psid_value = std::stoi(psid, nullptr, 16);
+        auto psid_value = std::stoi(psid, nullptr, 16);
         // Convert the integer to its decimal string representation
-        std::string psidInt = std::to_string(psid_value);
+        auto psidInt = std::to_string(psid_value);
         if (msg_id == psidInt)
         {
             return true;
+        }
+    }
+    return false;
+}
+
+bool V2XRadioClient::isValidPSID(size_t start_index, const std::vector<uint8_t> &entry)
+{
+    // Valid element id will exist, at max, 5 bytes after a PSID
+    for (auto i = start_index; i < start_index + 6; i++)
+    {
+        // Generate a 16-bit element id from two bytes, e.g. [03 128 ...] = 0x0380
+        auto element_id = (static_cast<uint16_t>(entry[i]) << 8) | static_cast<uint16_t>(entry[i+1]);
+        // Valid element id (0x0380) exists after PSID and before DSRCmsgID
+        if (element_id == 896)
+        {
+            auto element_id_index = i;
+            // Valid DSRCmsgID will exist, at max, 5 bytes after the element id
+            for (auto j = element_id_index; j < element_id_index + 6; j++)
+            {
+                // Generate a 16-bit message id from two bytes, e.g. [0 20 ...] = 0x0014
+                auto possible_msg_id = (static_cast<uint16_t>(entry[j]) << 8) | static_cast<uint16_t>(entry[j+1]);
+                // Check if BSM DSRCmsgID (0x0020)
+                if (possible_msg_id == 20)
+                {
+                    return true;
+                }
+            }
         }
     }
     return false;

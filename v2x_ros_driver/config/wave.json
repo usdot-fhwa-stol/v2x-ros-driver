@@ -7,13 +7,6 @@
     "priority" :  "6"
   },
   {
-    "name" : "TIM",
-    "psid" : "0083",
-    "dsrc_msg_id" : "31",
-    "channel" : "183",
-    "priority" : "3"
-  },
-  {
     "name" : "MAP",
     "psid" : "0082",
     "dsrc_msg_id" : "18",
@@ -26,6 +19,27 @@
     "dsrc_msg_id" : "19",
     "channel" : "183",
     "priority" : "3"
+  },
+  {
+    "name" : "TIM",
+    "psid" : "0083",
+    "dsrc_msg_id" : "31",
+    "channel" : "183",
+    "priority" : "3"
+  },
+  {
+    "name" : "PSM",
+    "psid" : "0027",
+    "dsrc_msg_id" : "32",
+    "channel" : "183",
+    "priority" : "6"
+  },
+  {
+    "name" : "SDSM",
+    "psid" : "8010",
+    "dsrc_msg_id" : "41",
+    "channel" : "183",
+    "priority" : "6"
   },
   {
     "name" : "MobilityRequest",
@@ -59,13 +73,6 @@
     "name" : "TrafficControlRequest",
     "psid" : "8003",
     "dsrc_msg_id" : "244",
-    "channel" : "183",
-    "priority" : "6"
-  },
-  {
-    "name" : "PSM",
-    "psid" : "0027",
-    "dsrc_msg_id" : "32",
     "channel" : "183",
     "priority" : "6"
   },
