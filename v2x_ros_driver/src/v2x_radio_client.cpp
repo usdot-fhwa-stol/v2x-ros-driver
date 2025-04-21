@@ -283,7 +283,7 @@ bool V2XRadioClient::isValidPSID(size_t start_index, const std::vector<uint8_t> 
             {
                 // Generate a 16-bit message id from two bytes, e.g. [0 20 ...] = 0x0014
                 auto possible_msg_id = (static_cast<uint16_t>(entry[j]) << 8) | static_cast<uint16_t>(entry[j+1]);
-                // Check if BSM DSRCmsgID (0x0020)
+                // Check if BSM DSRCmsgID 20 (0x0014)
                 if (possible_msg_id == 20)
                 {
                     return true;
