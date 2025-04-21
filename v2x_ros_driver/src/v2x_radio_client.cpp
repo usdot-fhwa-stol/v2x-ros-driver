@@ -274,7 +274,7 @@ bool V2XRadioClient::isValidPSID(size_t start_index, const std::vector<uint8_t> 
     {
         // Generate a 16-bit element id from two bytes, e.g. [03 128 ...] = 0x0380
         auto element_id = (static_cast<uint16_t>(entry[i]) << 8) | static_cast<uint16_t>(entry[i+1]);
-        // Valid element id (0x0380) exists after PSID and before DSRCmsgID
+        // Check if valid element id 896 (0x0380) exists after PSID and before DSRCmsgID
         if (element_id == 896)
         {
             auto element_id_index = i;
