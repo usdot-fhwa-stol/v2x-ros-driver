@@ -150,53 +150,43 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &
         return;
     }
 
-    for (size_t i = 0; i < entry.size() - 3; i++) 
+    for (size_t i = 0; i < entry.size() - 3; i++)
     {   // Leave 3 bytes after (for lsb of id, length byte 1, and either message body or length byte 2)
         // Generate a 16-bit message id from two bytes, e.g. [0 20 ...] = 0x0014, skip if it isn't a valid one
         auto msg_id = (static_cast<uint16_t>(entry[i]) << 8) | static_cast<uint16_t>(entry[i + 1]);
         if (!IsValidMsgID(std::to_string(msg_id))) { continue; }
 
-        if ((i + short_frame_) < entry.size()) {
-            auto start_index = i;
-            std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.end());
+        if ((i + short_frame_) >= entry.size()) {
+            continue; // Skip if not enough data remaining
+        }
 
-            // TODO lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length
-            // marker. It doesn't look like we'll be receiving anything that long
-            if (msg_vec.size() > 16383)
-            {
-                RCLCPP_WARN_STREAM(logger_, "V2XRadioClient::process() : discarding received message with length field longer than 16383.");
-                break;
-            }
+        auto start_index = i;
+        std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.end());
 
-            // Second check for a valid message. Checks MessageFrame length field against actual payload size.
-            if (!isValidMsgSize(msg_vec, start_index, entry))
-            {
-                RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
-                continue;
-            }
-            else
-            {
-                // Check for a valid message. (WSMP) T-Header uses same format as WAVE Short Message (WSM) and precurses the WSM in some cases.
-                // Make sure T-Header is not accidentally detected before actual message. This is done by checking detected msg_id against list of PSIDs.
-                if (!isPossiblePSID(std::to_string(msg_id)))
-                {
-                    onMessageReceived(msg_vec, msg_id);
-                    break;
-                }
-                else
-                {
-                    if (!isValidPSID(start_index, entry))
-                    {
-                        onMessageReceived(msg_vec, msg_id);
-                        break;
-                    }
-                    else
-                    {
-                        RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
-                        continue;
-                    }
-                }
-            }
+        // Check for oversized messages early
+        if (msg_vec.size() > 16383) {
+            RCLCPP_WARN_STREAM(logger_, "V2XRadioClient::process() : discarding received message with length field longer than 16383.");
+            break;
+        }
+
+        // Validate message size
+        if (!isValidMsgSize(msg_vec, start_index, entry)) {
+            RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
+            continue;
+        }
+
+        // Determine if we should process the message or continue searching by checking for a valid message.
+        // (WSMP) T-Header uses same format as WAVE Short Message (WSM) and precurses the WSM in some cases.
+        // Make sure T-Header is not accidentally detected before actual message. This is done by checking detected msg_id against list of PSIDs.
+        bool shouldProcess = !isPossiblePSID(std::to_string(msg_id)) ||
+                             !isValidMsgAssumingBSMPSID(start_index, entry);
+
+        if (shouldProcess) {
+            onMessageReceived(msg_vec, msg_id);
+            break;
+        } else {
+            RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
+            continue;
         }
     }
 }
@@ -204,7 +194,7 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &
 bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> &msg_vec, size_t start_index, const std::vector<uint8_t> &entry)
 {
     // If message vector is 128 bytes or larger, length field will be 2 bytes.
-    if (msg_vec.size() > 127) 
+    if (msg_vec.size() > 127)
     {
         auto tmp_start_index = start_index + long_frame_;
         std::vector<uint8_t> long_vec(entry.begin() + tmp_start_index, entry.end());
@@ -219,7 +209,7 @@ bool V2XRadioClient::isValidMsgSize(const std::vector<uint8_t> &msg_vec, size_t 
             {
                 return true;
             }
-        else 
+        else
         {
             return false;
         }
@@ -253,7 +243,7 @@ bool V2XRadioClient::isPossiblePSID(const std::string &msg_id)
         loadWaveConfigIds(this->wave_file_path);
     }
 
-    for (const auto &psid : this->wave_cfg_psids_) 
+    for (const auto &psid : this->wave_cfg_psids_)
     {
         // Convert the hex string to an integer
         auto psid_value = std::stoi(psid, nullptr, 16);
@@ -267,7 +257,7 @@ bool V2XRadioClient::isPossiblePSID(const std::string &msg_id)
     return false;
 }
 
-bool V2XRadioClient::isValidPSID(size_t start_index, const std::vector<uint8_t> &entry)
+bool V2XRadioClient::isValidMsgAssumingBSMPSID(size_t start_index, const std::vector<uint8_t> &entry)
 {
     // Valid element id will exist, at max, 5 bytes after a PSID
     for (auto i = start_index; i < start_index + 6; i++)
