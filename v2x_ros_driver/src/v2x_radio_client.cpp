@@ -157,19 +157,20 @@ void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &
         if (!IsValidMsgID(std::to_string(msg_id))) { continue; }
 
         if ((i + short_frame_) >= entry.size()) {
-            continue; // Skip if not enough data remaining
+            break; // Break if not enough data remaining
         }
 
         auto start_index = i;
         std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.end());
 
-        // Check for oversized messages early
+        // TODO lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length
+        // marker. It doesn't look like we'll be receiving anything that long
         if (msg_vec.size() > 16383) {
             RCLCPP_WARN_STREAM(logger_, "V2XRadioClient::process() : discarding received message with length field longer than 16383.");
             break;
         }
 
-        // Validate message size
+        // Second check for a valid message. Checks MessageFrame length field against actual payload size.
         if (!isValidMsgSize(msg_vec, start_index, entry)) {
             RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
             continue;
