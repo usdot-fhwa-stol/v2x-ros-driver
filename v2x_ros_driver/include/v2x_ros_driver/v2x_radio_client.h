@@ -144,8 +144,8 @@ public:
     bool isPossiblePSID(const std::string &msg_id);
 
     /**
-     * @brief Final check to ensure a found BSM PSID (0x0020) is not actually a PSM DSRCmsgID (0x0020). This is done by looking for the Element ID (0x0380),
-     * followed by the BSM DSRCmsgID (0x0014). Specifically, looking for 0020...0380...0014, else false.
+     * @brief Final check to ensure a found BSM PSID (0x0020) is not actually PSM DSRCmsgID 32 (0x0020). This is done by looking for the Element ID (0x0380),
+     * followed by the BSM DSRCmsgID 20 (0x0014). Specifically, looking for 0020...0380...0014, else false.
      * @param start_index Starting index for detected payload within message vector
      * @param entry Received data reference used to generate test vectors
      */
