@@ -1,7 +1,6 @@
-| CI Build Status | Sonar Code Quality | DockerHub Release | DockerHub Release Candidate | DockerHub Develop |
-|------|-----|-----|-----|-----|
-[![CI](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml/badge.svg)](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml) | [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=usdot-fhwa-stol_CARMACohdaDsrcDriver&metric=alert_status)](https://sonarcloud.io/dashboard?id=usdot-fhwa-stol_CARMACohdaDsrcDriver) | [![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/usdotfhwastol/v2x-ros-driver?label=v2x-ros-driver)](https://hub.docker.com/repository/docker/usdotfhwastol/v2x-ros-driver) | [![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/usdotfhwastolcandidate/v2x-ros-driver?label=v2x-ros-driver)](https://hub.docker.com/repository/docker/usdotfhwastolcandidate/v2x-ros-driver) | [![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/usdotfhwastoldev/v2x-ros-driver?label=v2x-ros-driver)](https://hub.docker.com/repository/docker/usdotfhwastoldev/v2x-ros-driver)
-
+| CI Build Status | Sonar Code Quality |  Unit Tests Workflow | DockerHub Image Build |
+|------|-----|-----|-----|
+[![CI](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml/badge.svg)](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml) | [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=usdot-fhwa-stol_v2x-ros-driver&metric=alert_status)](https://sonarcloud.io/dashboard?id=usdot-fhwa-stol_v2x-ros-driver) | [![Build Workflows](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml) |  [![Build Workflows](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/dockerhub.yml/badge.svg?branch=develop)](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/dockerhub.yml)
 
 
 # V2X-ROS-driver
