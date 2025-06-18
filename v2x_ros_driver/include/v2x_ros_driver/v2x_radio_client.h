@@ -110,13 +110,13 @@ public:
     bool sendV2xMessage(const std::shared_ptr<std::vector<uint8_t>> &message);
 
     /**
-     * @brief Validate possible Message ID
+     * @brief Validate possible DSRCmsgID
      * @param msg_id Message ID under test
      */
     bool IsValidMsgID(const std::string &msg_id);
 
     /**
-     * @brief Load list of valid msg_id
+     * @brief Load list of valid dsrc_msg_ids
      * @param fileName Configuration file to be loaded
      */
     void loadWaveConfigIds(const std::string &fileName);
@@ -131,16 +131,25 @@ public:
      * @brief Checks actual message vector size against size specified in MessageFrame
      * @param msg_vec Full message vector under test
      * @param start_index Starting index for detected payload within message vector
-     * @param end_index Ending index for payload within message vector
      * @param entry Recevied data reference used to generate test vectors
      */
-    bool isValidMsgSize(const std::vector<uint8_t> msg_vec, size_t start_index, size_t end_index, const std::vector<uint8_t> entry);
-    
+    bool isValidMsgSize(const std::vector<uint8_t> &msg_vec, size_t start_index, const std::vector<uint8_t> &entry);
+
     /**
-     * @brief Checks msg_id against Provider Service ID (PSID) list to make sure a Wireless Access in Vehicular Environments (WAVE) Service Advertisement (WSA) with valid PSID is not accidentally used instead of MessageFrame
+     * @brief Initial check for msg_id against Provider Service ID (PSID) list to make sure a Wireless Access in Vehicular Environments (WAVE)
+     * Short Message Protocol (WSMP) T-Header with valid PSID is not accidentally used instead of WSM Data (MessageFrame + Payload).
+     * IEEE 1609.3 (2020) - Section 8.3 Figure 33 and Section 8.3.3 Table 21, Figure 36 (TPID = 0).
      * @param msg_id Message ID under test
      */
-    bool isValidPSID(const std::string& msg_id);
+    bool isPossiblePSID(const std::string &msg_id);
+
+    /**
+     * @brief Final check to ensure a found BSM PSID (0x0020) is not actually PSM DSRCmsgID 32 (0x0020). This is done by looking for the Element ID (0x0380),
+     * followed by the BSM DSRCmsgID 20 (0x0014). Specifically, looking for 0020...0380...0014, else false.
+     * @param start_index Starting index for detected payload within message vector
+     * @param entry Received data reference used to generate test vectors
+     */
+    bool isValidMsgAssumingBSMPSID(size_t start_index, const std::vector<uint8_t> &entry);
 
 private:
     rclcpp::Logger logger_{rclcpp::get_logger("v2x_radio_client")};
@@ -151,20 +160,21 @@ private:
 
     std::shared_ptr<std::thread> io_thread_;
     volatile bool running_;
-    std::vector<std::string> wave_cfg_dsrc_ids_;
+    std::vector<std::string> wave_cfg_dsrc_msg_ids_;
     std::vector<std::string> wave_cfg_psids_;
     std::string wave_file_path;
 
-    //udp
     std::unique_ptr<boost::asio::ip::udp::socket> udp_out_socket_;
     boost::asio::ip::udp::endpoint remote_udp_ep_;
     std::unique_ptr<cav::UDPListener> udp_listener_;
 
-    /** @brief WAVE Service Advertisement (WSA) frame size (bytes) for J2735 payloads >127 octets. IEEE 1609.3 (2020) - 8.1.3 */
+    /** @brief WAVE Service Advertisement (WSA) frame size = 2 bytes for J2735 payloads > 127 bytes. IEEE 1609.3 (2020) - 8.1.3.
+     * Add 2 bytes for DSRCmsgID. */
     static const int long_frame_ = 4;
-    /** @brief WAVE Service Advertisement (WSA) frame size (bytes) for J2735 payloads <127 octets. IEEE 1609.3 (2020) - 8.1.3 */
+    /** @brief WAVE Service Advertisement (WSA) frame size = 1 byte for J2735 payloads < 128 bytes. IEEE 1609.3 (2020) - 8.1.3.
+     * Add 2 bytes for DSRCmsgID. */
     static const int short_frame_ = 3;
-    
+
     /**
     * @brief Maintains the process thread.
     * This will parse through the incoming UDP packets and runs various tests to find a

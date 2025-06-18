@@ -76,16 +76,16 @@ class Node : public carma_ros2_utils::CarmaLifecycleNode
 private:
     struct WaveConfigStruct
     {
-        std::string name, psid, dsrc_id, channel, priority;
+        std::string name, psid, dsrc_msg_id, channel, priority;
 
         WaveConfigStruct(){};
         WaveConfigStruct(const std::string &name,
                          const std::string &psid,
-                         const std::string &dsrc_id,
+                         const std::string &dsrc_msg_id,
                          const std::string &channel,
                          const std::string &priority) : name(name),
                                          psid(psid),
-                                         dsrc_id(dsrc_id),
+                                         dsrc_msg_id(dsrc_msg_id),
                                          channel(channel),
                                          priority(priority) {}
     };

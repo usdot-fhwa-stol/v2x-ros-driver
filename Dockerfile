@@ -15,8 +15,8 @@
 # Image build
 ARG DOCKER_ORG="usdotfhwastoldev"
 ARG DOCKER_TAG="develop-humble"
-FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} as base_image
-FROM base_image as setup
+FROM ${DOCKER_ORG}/carma-base:${DOCKER_TAG} AS base_image
+FROM base_image AS setup
 ARG GIT_BRANCH="develop"
 
 ARG ROS1_PACKAGES=""
