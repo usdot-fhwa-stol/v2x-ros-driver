@@ -1,19 +1,35 @@
 name: CI
 on:
-  push:
   pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - develop
+      - master
+      - "release/*"
 jobs:
+  determine_docker_org_and_tag:
+    runs-on: ubuntu-latest
+    outputs:
+      docker_organization: ${{ steps.docker-org-and-tag.outputs.docker_organization }}
+      docker_image_tag: ${{ steps.docker-org-and-tag.outputs.docker_image_tag }}
+    steps:
+      - id: docker-org-and-tag
+        uses: usdot-fhwa-stol/actions/docker-org-and-tag@main
+        with:
+          docker_tag_suffix: humble
   build:
+    needs: determine_docker_org_and_tag
     defaults:
       run:
         shell: bash
         working-directory: "/opt/carma/"
     runs-on: ubuntu-latest
     container:
-      image: usdotfhwastol/carma-base:carma-system-4.5.0
+      image: ${{ needs.determine_docker_org_and_tag.outputs.docker_organization }}/carma-base:${{ needs.determine_docker_org_and_tag.outputs.docker_image_tag }}
       env:
         INIT_ENV: "/home/carma/.base-image/init-env.sh"
-        ROS_2_ENV: "/opt/ros/foxy/setup.bash"
+        ROS_2_ENV: "/opt/ros/humble/setup.bash"
         TERM: xterm
       options: "--user root"
     steps:
@@ -24,21 +40,29 @@ jobs:
         path: src/${{ github.event.repository.name }}
     - name: Move source code
       run: mv $GITHUB_WORKSPACE/src /opt/carma/
+    - name: Determine base branch
+      id: determine-base-branch
+      run: |
+        if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+          echo git_branch="$GITHUB_BASE_REF" >> $GITHUB_OUTPUT
+        else
+          echo git_branch="$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
+        fi
     - name: Checkout dependencies
       run: |
         source "$INIT_ENV"
-        ./src/${{ github.event.repository.name }}/docker/checkout.bash -r /opt/carma/
+        ./src/${{ github.event.repository.name }}/docker/checkout.bash -r /opt/carma/ -b ${{ steps.determine-base-branch.outputs.git_branch }}
     - name: Build
       run: |
         source "$INIT_ENV"
         source "$ROS_2_ENV"
-        sed -i '/colcon build/ s/$/ --packages-up-to dsrc_driver/' /home/carma/.ci-image/engineering_tools/code_coverage/make_with_coverage.bash
+        sed -i '/colcon build/ s/$/ --packages-up-to v2x_ros_driver/' /home/carma/.ci-image/engineering_tools/code_coverage/make_with_coverage.bash
         make_with_coverage.bash -m -e /opt/carma/ -o ./coverage_reports/gcov
     - name: Run C++ Tests
       run: |
         source "$INIT_ENV"
         source "$ROS_2_ENV"
-        sed -i '/colcon test/ s/$/ --packages-above dsrc_driver/' /home/carma/.ci-image/engineering_tools/code_coverage/make_with_coverage.bash
+        sed -i '/colcon test/ s/$/ --packages-above v2x_ros_driver/' /home/carma/.ci-image/engineering_tools/code_coverage/make_with_coverage.bash
         make_with_coverage.bash -t -e /opt/carma/ -o ./coverage_reports/gcov
     - name: Run SonarScanner
       uses: usdot-fhwa-stol/actions/sonar-scanner@main

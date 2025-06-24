@@ -32,13 +32,13 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "dsrc_driver/dsrc_driver_node.h"
+#include "v2x_ros_driver/v2x_ros_driver_node.h"
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/schema.h>
 #include <fstream>
 
-namespace DSRCApplication
+namespace V2XDriverApplication
 {
 
 namespace std_ph = std::placeholders;
@@ -51,16 +51,16 @@ Node::Node(const rclcpp::NodeOptions &options)
 
     // Declare parameters
     config_.listening_port = declare_parameter<int>("listening_port", config_.listening_port);
-    config_.dsrc_listening_port = declare_parameter<int>("dsrc_listening_port", config_.dsrc_listening_port);
-    config_.dsrc_address = declare_parameter<std::string>("dsrc_address", config_.dsrc_address);
+    config_.v2x_radio_listening_port = declare_parameter<int>("v2x_radio_listening_port", config_.v2x_radio_listening_port);
+    config_.v2x_radio_address = declare_parameter<std::string>("v2x_radio_address", config_.v2x_radio_address);
 }
 
 rcl_interfaces::msg::SetParametersResult Node::parameter_update_callback(const std::vector<rclcpp::Parameter> &parameters)
 {
 
     auto error = update_params<int>({{"listening_port", config_.listening_port}}, parameters);
-    auto error_2 = update_params<int>({{"dsrc_listening_port", config_.dsrc_listening_port}}, parameters);
-    auto error_3 = update_params<std::string>({{"dsrc_address", config_.dsrc_address}}, parameters);
+    auto error_2 = update_params<int>({{"v2x_radio_listening_port", config_.v2x_radio_listening_port}}, parameters);
+    auto error_3 = update_params<std::string>({{"v2x_radio_address", config_.v2x_radio_address}}, parameters);
 
     rcl_interfaces::msg::SetParametersResult result;
 
@@ -83,21 +83,21 @@ std::string Node::uint8_vector_to_hex_string(const std::vector<uint8_t>& v) {
 
 carma_ros2_utils::CallbackReturn Node::handle_on_configure(const rclcpp_lifecycle::State &) {
 
-    RCLCPP_INFO_STREAM(this->get_logger(), "dsrc_driver trying to configure");
+    RCLCPP_INFO_STREAM(this->get_logger(), "v2x_ros_driver trying to configure");
 
     // Reset config
     config_ = Config();
 
     // Load parameters
     get_parameter<int>("listening_port", config_.listening_port);
-    get_parameter<int>("dsrc_listening_port", config_.dsrc_listening_port);
-    get_parameter<std::string>("dsrc_address", config_.dsrc_address);
+    get_parameter<int>("v2x_radio_listening_port", config_.v2x_radio_listening_port);
+    get_parameter<std::string>("v2x_radio_address", config_.v2x_radio_address);
 
     RCLCPP_INFO_STREAM(this->get_logger(), "Loaded params: " << config_);
 
     pre_spin();
 
-    std::string package_share_directory = ament_index_cpp::get_package_share_directory("dsrc_driver");
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory("v2x_ros_driver");
 
     std::string wave_cfg_file = package_share_directory + "/etc/wave.json";
     loadWaveConfig(wave_cfg_file);
@@ -105,13 +105,13 @@ carma_ros2_utils::CallbackReturn Node::handle_on_configure(const rclcpp_lifecycl
     // Register runtime parameter update callback
     add_on_set_parameters_callback(std::bind(&Node::parameter_update_callback, this, std_ph::_1));
 
-    //set wave file path in dsrc_client
-    dsrc_client_.set_wave_file_path(wave_cfg_file);
+    //set wave file path in v2x_radio_client
+    v2x_radio_client_.set_wave_file_path(wave_cfg_file);
     //Setup connection handlers
-    dsrc_client_error_.clear();
-    dsrc_client_.onConnect.connect([this](){});
-    dsrc_client_.onDisconnect.connect([this](){});
-    dsrc_client_.onError.connect([this](const boost::system::error_code& err){dsrc_client_error_ = err;});
+    v2x_radio_client_error_.clear();
+    v2x_radio_client_.onConnect.connect([this](){});
+    v2x_radio_client_.onDisconnect.connect([this](){});
+    v2x_radio_client_.onError.connect([this](const boost::system::error_code& err){v2x_radio_client_error_ = err;});
 
     //Comms Subscriber
     comms_sub_ = create_subscription<carma_driver_msgs::msg::ByteArray>("outbound_binary_msg", queue_size_, std::bind(&Node::onOutboundMessage, this, std_ph::_1));
@@ -123,7 +123,7 @@ carma_ros2_utils::CallbackReturn Node::handle_on_configure(const rclcpp_lifecycl
     // Setup service servers
     comms_srv_ = create_service<carma_driver_msgs::srv::SendMessage>("send", std::bind(&Node::sendMessageSrv, this, std_ph::_1, std_ph::_2, std_ph::_3));
 
-    dsrc_client_.onMessageReceived.connect([this](std::vector<uint8_t> const &msg, uint16_t id) {onMessageReceivedHandler(msg, id); });
+    v2x_radio_client_.onMessageReceived.connect([this](std::vector<uint8_t> const &msg, uint16_t id) {onMessageReceivedHandler(msg, id); });
 
     sendMessageFromQueue();
 
@@ -132,7 +132,7 @@ carma_ros2_utils::CallbackReturn Node::handle_on_configure(const rclcpp_lifecycl
 
 
 /**
-* @brief Handles messages received from the DSRCOBUClient
+* @brief Handles messages received from the V2XRadioClient
 *
 * Populates a ROS message with the contents of the incoming OBU message, and
 * publishes to the ROS 'recv' topic.
@@ -141,7 +141,7 @@ void Node::onMessageReceivedHandler(const std::vector<uint8_t> &data, uint16_t i
     // Create and populate the message
     auto it = std::find_if(wave_cfg_items_.begin(),wave_cfg_items_.end(),[id](const WaveConfigStruct& entry)
                                                                             {
-                                                                               return entry.dsrc_id == std::to_string(id);
+                                                                               return entry.dsrc_msg_id == std::to_string(id);
                                                                             });
 
     carma_driver_msgs::msg::ByteArray msg;
@@ -180,8 +180,8 @@ std::vector<uint8_t> Node::packMessage(carma_driver_msgs::msg::ByteArray message
         cfg.name = message.message_type;
         cfg.channel = "CCH";  //Assuming the Default channel is not the safety related info that would be in a BSM message
         cfg.priority = "1";
-        cfg.dsrc_id = std::to_string((message.content[0] << 8 ) | message.content[1]);
-        cfg.psid = cfg.dsrc_id;
+        cfg.dsrc_msg_id = std::to_string((message.content[0] << 8 ) | message.content[1]);
+        cfg.psid = cfg.dsrc_msg_id;
     }
     else
     {
@@ -214,9 +214,9 @@ std::vector<uint8_t> Node::packMessage(carma_driver_msgs::msg::ByteArray message
 * This method receives a message from the ROS network, and adds it to the send queue.
 */
 void Node::onOutboundMessage(carma_driver_msgs::msg::ByteArray::UniquePtr message) {
-    if(!dsrc_client_.connected())
+    if(!v2x_radio_client_.connected())
     {
-        RCLCPP_WARN_STREAM(this->get_logger(),"Outbound message received but node is not connected to DSRC Radio");
+        RCLCPP_WARN_STREAM(this->get_logger(),"Outbound message received but node is not connected to V2X Radio");
         return;
     }
     std::shared_ptr<std::vector<uint8_t>> message_content = std::make_shared<std::vector<uint8_t>>(std::move(packMessage(*message)));
@@ -230,7 +230,7 @@ void Node::onOutboundMessage(carma_driver_msgs::msg::ByteArray::UniquePtr messag
 void Node::sendMessageFromQueue() {
     if (!send_msg_queue_.empty()) {
         RCLCPP_DEBUG_STREAM(this->get_logger(),"Sending message: " << std::string(send_msg_queue_.front()->begin(),send_msg_queue_.front()->end()));
-        bool success = dsrc_client_.sendDsrcMessage(send_msg_queue_.front());
+        bool success = v2x_radio_client_.sendV2xMessage(send_msg_queue_.front());
         send_msg_queue_.pop_front();
         if (!success) {
             RCLCPP_WARN_STREAM(this->get_logger(),"Message send failed");
@@ -251,9 +251,9 @@ void Node::sendMessageSrv(const std::shared_ptr<rmw_request_id_t> header,
                                   const std::shared_ptr<carma_driver_msgs::srv::SendMessage::Request> req,
                                   const std::shared_ptr<carma_driver_msgs::srv::SendMessage::Response> res) {
 
-    if(!dsrc_client_.connected())
+    if(!v2x_radio_client_.connected())
     {
-        RCLCPP_WARN_STREAM(this->get_logger(),"Outbound message received but node is not connected to DSRC Radio");
+        RCLCPP_WARN_STREAM(this->get_logger(),"Outbound message received but node is not connected to V2X Radio");
         res->error_status = 1;
     }
 
@@ -263,7 +263,7 @@ void Node::sendMessageSrv(const std::shared_ptr<rmw_request_id_t> header,
 
     std::shared_ptr<std::vector<uint8_t>> message_data = std::make_shared<std::vector<uint8_t>>(std::move(packMessage(*message)));
 
-    bool success = dsrc_client_.sendDsrcMessage(message_data);
+    bool success = v2x_radio_client_.sendV2xMessage(message_data);
     if (success) {
         RCLCPP_DEBUG_STREAM(this->get_logger(),"SendMessage service returned success");
         res->error_status = 0;
@@ -277,14 +277,14 @@ void Node::sendMessageSrv(const std::shared_ptr<rmw_request_id_t> header,
 void Node::pre_spin()
 {
     // Adjust output queue size if config changed.
-    if(dsrc_client_error_)
+    if(v2x_radio_client_error_)
     {
-        RCLCPP_ERROR_STREAM(this->get_logger(),"DSRC Client Error : " << dsrc_client_error_.message());
-        dsrc_client_.close();
-        dsrc_client_error_.clear();
+        RCLCPP_ERROR_STREAM(this->get_logger(),"V2X Radio Client Error : " << v2x_radio_client_error_.message());
+        v2x_radio_client_.close();
+        v2x_radio_client_error_.clear();
     }
     //If we are not connected
-    if (!connecting_ && !dsrc_client_.connected())
+    if (!connecting_ && !v2x_radio_client_.connected())
     {
         connecting_ = true;
         if (connect_thread_)
@@ -296,19 +296,19 @@ void Node::pre_spin()
         {
             RCLCPP_INFO_STREAM(this->get_logger(),"Attempting to connect to OBU");
             boost::system::error_code ec;
-            RCLCPP_INFO_STREAM(this->get_logger(),"Connecting to: " << config_.dsrc_address.c_str() << ", " << config_.dsrc_listening_port);
+            RCLCPP_INFO_STREAM(this->get_logger(),"Connecting to: " << config_.v2x_radio_address.c_str() << ", " << config_.v2x_radio_listening_port);
             RCLCPP_INFO_STREAM(this->get_logger(),"Local port: " << config_.listening_port);
             try {
-                if (!dsrc_client_.connect(config_.dsrc_address, config_.dsrc_listening_port,
+                if (!v2x_radio_client_.connect(config_.v2x_radio_address, config_.v2x_radio_listening_port,
                                           config_.listening_port, ec))
                 {
                     RCLCPP_WARN_STREAM(this->get_logger(),"Failed to connect, err: " << ec.message());
                 }
             }catch(std::exception e)
             {
-                RCLCPP_ERROR_STREAM(this->get_logger(),"Exception connecting to dsrc radio: " << e.what() << " error_code: " << ec.message());
-                RCLCPP_ERROR_STREAM(this->get_logger(),"Config:\n\tdsrc_address:" << config_.dsrc_address
-                                         << "\n\tdsrc_listening_port:" << config_.dsrc_listening_port
+                RCLCPP_ERROR_STREAM(this->get_logger(),"Exception connecting to v2x radio: " << e.what() << " error_code: " << ec.message());
+                RCLCPP_ERROR_STREAM(this->get_logger(),"Config:\n\tv2x_radio_address:" << config_.v2x_radio_address
+                                         << "\n\tv2x_radio_listening_port:" << config_.v2x_radio_listening_port
                                          << "\n\tlistening_port:" << config_.listening_port);
             }
 
@@ -338,7 +338,7 @@ void Node::loadWaveConfig(const std::string &fileName)
                         "        \"description\": \"psid assigned to message type in decimal\",\n"
                         "        \"type\": \"string\"\n"
                         "      },\n"
-                        "      \"dsrc_id\": {\n"
+                        "      \"dsrc_msg_id\": {\n"
                         "        \"description\": \"J2735 DSRC id assigned to message type in decimal\",\n"
                         "        \"type\": \"string\"\n"
                         "      },\n"
@@ -351,7 +351,7 @@ void Node::loadWaveConfig(const std::string &fileName)
                         "        \"type\":\"string\"\n"
                         "      }\n"
                         "    },\n"
-                        "    \"required\":[\"name\",\"psid\",\"dsrc_id\",\"channel\",\"priority\"]"
+                        "    \"required\":[\"name\",\"psid\",\"dsrc_msg_id\",\"channel\",\"priority\"]"
                         "  }\n"
                         "}\n";
 
@@ -394,7 +394,7 @@ void Node::loadWaveConfig(const std::string &fileName)
         auto entry = it.GetObject();
         wave_cfg_items_.emplace_back(entry["name"].GetString(),
                                      entry["psid"].GetString(),
-                                     entry["dsrc_id"].GetString(),
+                                     entry["dsrc_msg_id"].GetString(),
                                      entry["channel"].GetString(),
                                      entry["priority"].GetString());
 
@@ -412,7 +412,7 @@ void Node::handle_on_shutdown()
     }
 
     RCLCPP_INFO_STREAM(this->get_logger(),"Closing connection to radio");
-    dsrc_client_.close();
+    v2x_radio_client_.close();
 }
 
 }
@@ -420,4 +420,4 @@ void Node::handle_on_shutdown()
 #include "rclcpp_components/register_node_macro.hpp"
 
 // Register the component with class_loader
-RCLCPP_COMPONENTS_REGISTER_NODE(DSRCApplication::Node)
+RCLCPP_COMPONENTS_REGISTER_NODE(V2XDriverApplication::Node)

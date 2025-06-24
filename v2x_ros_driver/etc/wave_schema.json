@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-06/schema#",
   "title": "Wave Config Schema",
-  "description": "A simple schema to describe DSRC/Wave messages",
+  "description": "A simple schema to describe WAVE messages",
   "type": "array",
   "items": {
     "type": "object",
@@ -14,12 +14,12 @@
         "description": "psid assigned to message type in 2-byte Hex ie 8003 or 0020",
         "type": "string"
       },
-      "dsrc_id": {
-        "description": "J2735 DSRC id assigned to message type in decimal",
+      "dsrc_msg_id": {
+        "description": "J2735 DSRCmsgID assigned to message type in decimal",
         "type": "string"
       },
       "channel": {
-        "description": "DSRC radio channel assigned to message type in decimal",
+        "description": "Wave radio channel assigned to message type in decimal",
         "type": "string"
       },
       "priority": {
@@ -27,6 +27,6 @@
         "type": "string"
       }
     },
-    "required":["name","psid","dsrc_id","channel","priority"]
+    "required":["name","psid","dsrc_msg_id","channel","priority"]
   }
 }
