@@ -1,0 +1,95 @@
+#!/bin/sh
+
+DIR=/opt/cohda/application/rsu1609
+RSU=rc.rsu1609
+
+# OpenVPN configuration if present
+if [[ -e /mnt/./ubi/.openvpn ]]
+then
+    touch /mnt/./ubi/.openvpn/Create_link_called_active.conf_to_OpenVPN_configuration_file_to_activate_at_boot_time
+    cp -P /mnt/./ubi/.openvpn/*.conf /etc/openvpn
+    # The configuration file MUST be readable ONLY by root and no-one else.
+    # You should have a symbolic link in .openvpn called 'active.conf' which points to
+    # The openvpn configuration file to load at boot
+    chmod og-rwx /etc/openvpn/*.conf
+    sudo systemctl restart openvpn@active
+fi
+
+
+cohda_start()
+{
+    # Make sure that /mnt/src/log exists and is writeable
+    mount /dev/mmcblk1 /mnt/src
+    mkdir -p /mnt/src/log
+    chmod 777 /mnt/src/log
+    if [ ! -e /mnt/./ubi/log ]; then
+        ln -s /mnt/src/log /mnt/./ubi/log
+    fi
+    # Make sure that /mnt/src/sync exists and is writeable
+    mkdir -p /mnt/src/sync
+    chmod 777 /mnt/src/sync
+
+    # Make sure that /opt/cohda/application/sys exists, and if not create and copy-in
+    # example configuration files
+    mkdir -p /mnt/./rw/sys
+    rsync -av ${DIR}/sys /mnt/./rw
+
+    ${DIR}/${RSU} start rsu
+    /mnt/rw/check-mk6-conf.sh
+}
+
+cohda_stop()
+{
+    ${DIR}/${RSU} stop
+    # killall will return a non-zero value if no process is killed
+    pgrep ${RSU}
+    if [ $? -eq 0 ]; then
+        killall ${RSU}
+    fi
+}
+
+cohda_reload()
+{
+    ${DIR}/${RSU} restart rsu
+}
+
+cohda_standby()
+{
+    ${DIR}/${RSU} standby rsu
+}
+
+cohda_operate()
+{
+    ${DIR}/${RSU} operate rsu
+}
+
+
+mode=$1
+echo "$0 is called with parameter: '$mode'"
+
+case $mode in
+    "start")
+        cohda_start
+        ;;
+    "stop")
+        cohda_stop
+        ;;
+    "halt")
+        cohda_stop
+        ;;
+    "restart")
+        cohda_stop
+        cohda_start
+        ;;
+    "standby")
+        cohda_standby
+        ;;
+    "operate")
+        cohda_operate
+        ;;
+    "reload")
+        cohda_reload
+        ;;
+    *)
+        ;;
+esac

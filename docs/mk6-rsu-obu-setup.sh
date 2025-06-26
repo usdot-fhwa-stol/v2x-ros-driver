@@ -1,5 +1,4 @@
 #!/bin/bash
-#ddk 2025-04-29
 
 ##############################################################################
 # Default settings, no change needed if running this script locally
@@ -13,6 +12,14 @@ export SUT_IPV6_ADDR="::1"
 export IP="udp6:[$SUT_IPV6_ADDR]:161"
 export TX_MODE=0
 export CHAN=183
+
+# Change the following to the desired start and end dates for the WSMFwdRx table
+# Example: 2025-01-01 00:00 UTC = 07E901010000
+FW_StartDate="07E901010000"
+FW_EndDate="07EE01010000"
+# Change IP address and port to remote receiving address (spectra pc)
+REMOTE_IP="192.168.88.10"
+REMOTE_PORT="5398"
 
 ##############################################################################
 # Detecting Environment
@@ -66,9 +73,7 @@ fi
   echo "Cohda_DebugTimeLevel       = 1"     >> /mnt/rw/rsu1609/conf/stack.conf
   echo "Cohda_DebugInfoLevel       = 2"     >> /mnt/rw/rsu1609/conf/stack.conf
 
-  echo "SecurityEnable             = 0"     >> /mnt/rw/rsu1609/conf/stack.conf
-  echo "SendUnsecuredDot2Header    = 1"     >> /mnt/rw/rsu1609/conf/stack.conf
-  echo "BSMUnsecurePSID            = 0x20"  >> /mnt/rw/rsu1609/conf/stack.conf
+  echo "SecurityEnable             = 1"     >> /mnt/rw/rsu1609/conf/stack.conf
 
   echo "Cohda_Crypto_TestCountryCode = 840" >> /mnt/rw/rsu1609/conf/stack.conf
   echo "Cohda_Crypto_AeroLogging     = all" >> /mnt/rw/rsu1609/conf/stack.conf
@@ -160,7 +165,7 @@ echo "${FUNCNAME[0]} "
 snmpwalk $RW_AUTH_ARGS iso.0.15628.4.1 
 }
 
-_configure_IMF_simulation()
+_configure_IFM_simulation()
 {
 find . -name "cw_*.txt" 2>/dev/null | xargs sed -i "s/Signature=.*/Signature=False/"
 find . -name "cw_*.txt" 2>/dev/null | xargs sed -i "s/TxChannel.*/TxChannel=${CHAN}/"
@@ -168,232 +173,109 @@ find . -name "cw_*.txt" 2>/dev/null | xargs sed -i "s/TxMode.*/TxMode=CONT/"
 sync
 }
 
-
-##############################################################################
-# NMEA Forward
-##############################################################################
-#192.168.1.101 = 0xC0.0xA8.0x01.0x65
-FW_NMEA_ADDR=0x000000000000000000000000C0A80165
-FW_NMEA_PORT1="14998"
-
-_set_NMEA_forward()
+to_hex()
 {
-echo
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuGpsOutputPort.0 i $FW_NMEA_PORT1 \
-rsuGpsOutputAddress.0 x $FW_NMEA_ADDR \
-rsuGpsOutputInterface.0 s eth0 \
-rsuGpsOutputInterval.0 i 1
-}
+  local hex_ip="000000000000000000000000"
+  
+  # Split the IP address into its four octets
+  IFS='.' read -r -a octets <<< "$1"
+  
+  # Convert each octet to hex and concatenate
+  for octet in "${octets[@]}";
+  do
+      hex_ip+=$(printf '%02X' "$octet")
+  done
 
+  echo $hex_ip
+}
 
 ##############################################################################
 # WSMFwdRx table
 ##############################################################################
-#192.168.88.10 = 0xC0.0xA8.0x58.0x0A
-WSMFWD_ADDR=0x000000000000000000000000C0A8580A
-WSMFWD_PORT="5398"
-WSMFWD_PSID1="0x20"
-WSMFWD_PSID2="0x8002"
-WSMFWD_PSID3="0x8003"
-WSMFWD_PSID4="0x27"
-WSMFWD_PSID5="0x8010"
-WSMFWD_RSSI="-100"
-WSMFWD_STRT="07E901010000"
-WSMFWD_STOP="07EE01010000"
-
-_disable_WSMFwdRx()
-{
-echo " "
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuDsrcFwdEnable.1 i 0 
-}
+# Convert the SUT IPv4 address to hex
+# The hex IP address is 32 characters long, with leading zeros
+# Example: 192.168.88.10 = 000000000000000000000000c0a8580a
+WSMFWD_ADDR=$(to_hex "$REMOTE_IP")
+if [ "${#WSMFWD_ADDR}" -ne 32 ]; then
+  echo "The submitted IP address is invalid. Exiting..."
+  exit 1
+fi
+echo "Configuring using backhaul IP address: $REMOTE_IP"
+echo "IP address in hex: $WSMFWD_ADDR"
 
 _destroy_WSMFwdRx()
 {
 echo " "
 echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuDsrcFwdStatus.4 i 6 \
-rsuDsrcFwdStatus.3 i 6 \
-rsuDsrcFwdStatus.2 i 6 \
-rsuDsrcFwdStatus.1 i 6
+for i in {9..1}; do
+  snmpset $RW_AUTH_ARGS rsuDsrcFwdStatus.$i i 6 1>/dev/null
+done
 }
 
-_set_WSMFwdRx1()
-{
-echo
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuDsrcFwdPsid.1 x $WSMFWD_PSID1 \
-rsuDsrcFwdDestIpAddr.1 x $WSMFWD_ADDR \
-rsuDsrcFwdDestPort.1 i $WSMFWD_PORT \
-rsuDsrcFwdProtocol.1 i 2 \
-rsuDsrcFwdRssi.1 i $WSMFWD_RSSI \
-rsuDsrcFwdMsgInterval.1 i 1 \
-rsuDsrcFwdDeliveryStart.1 x $WSMFWD_STRT \
-rsuDsrcFwdDeliveryStop.1 x $WSMFWD_STOP \
-rsuDsrcFwdEnable.1 i 1 \
-rsuDsrcFwdStatus.1 i 4
-}
+_set_WSMFwdRx() {
+  echo
+  echo "${FUNCNAME[0]} "
 
-_set_WSMFwdRx2()
-{
-echo
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuDsrcFwdPsid.2 x $WSMFWD_PSID2 \
-rsuDsrcFwdDestIpAddr.2 x $WSMFWD_ADDR \
-rsuDsrcFwdDestPort.2 i $WSMFWD_PORT \
-rsuDsrcFwdProtocol.2 i 2 \
-rsuDsrcFwdRssi.2 i $WSMFWD_RSSI \
-rsuDsrcFwdMsgInterval.2 i 1 \
-rsuDsrcFwdDeliveryStart.2 x $WSMFWD_STRT \
-rsuDsrcFwdDeliveryStop.2 x $WSMFWD_STOP \
-rsuDsrcFwdEnable.2 i 1 \
-rsuDsrcFwdStatus.2 i 4
-}
+  local psid_list=("0x20" "0x27" "0x8003" "0x8010" "0xBFEE")
+  local fwd_index=1
 
-_set_WSMFwdRx3()
-{
-echo
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuDsrcFwdPsid.3 x $WSMFWD_PSID3 \
-rsuDsrcFwdDestIpAddr.3 x $WSMFWD_ADDR \
-rsuDsrcFwdDestPort.3 i $WSMFWD_PORT \
-rsuDsrcFwdProtocol.3 i 2 \
-rsuDsrcFwdRssi.3 i $WSMFWD_RSSI \
-rsuDsrcFwdMsgInterval.3 i 1 \
-rsuDsrcFwdDeliveryStart.3 x $WSMFWD_STRT \
-rsuDsrcFwdDeliveryStop.3 x $WSMFWD_STOP \
-rsuDsrcFwdEnable.3 i 1 \
-rsuDsrcFwdStatus.3 i 4
-}
+  for psid in "${psid_list[@]}"; do
+    snmpset $RW_AUTH_ARGS \
+      rsuDsrcFwdPsid.$fwd_index        x "$psid" \
+      rsuDsrcFwdDestIpAddr.$fwd_index  x "$WSMFWD_ADDR" \
+      rsuDsrcFwdDestPort.$fwd_index    i "$REMOTE_PORT" \
+      rsuDsrcFwdProtocol.$fwd_index    i 2 \
+      rsuDsrcFwdRssi.$fwd_index        i -100 \
+      rsuDsrcFwdMsgInterval.$fwd_index i 1 \
+      rsuDsrcFwdDeliveryStart.$fwd_index x "$FW_StartDate" \
+      rsuDsrcFwdDeliveryStop.$fwd_index  x "$FW_EndDate" \
+      rsuDsrcFwdEnable.$fwd_index      i 1 \
+      rsuDsrcFwdStatus.$fwd_index      i 4
+    echo
 
-_set_WSMFwdRx4()
-{
-echo
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuDsrcFwdPsid.4 x $WSMFWD_PSID4 \
-rsuDsrcFwdDestIpAddr.4 x $WSMFWD_ADDR \
-rsuDsrcFwdDestPort.4 i $WSMFWD_PORT \
-rsuDsrcFwdProtocol.4 i 2 \
-rsuDsrcFwdRssi.4 i $WSMFWD_RSSI \
-rsuDsrcFwdMsgInterval.4 i 1 \
-rsuDsrcFwdDeliveryStart.4 x $WSMFWD_STRT \
-rsuDsrcFwdDeliveryStop.4 x $WSMFWD_STOP \
-rsuDsrcFwdEnable.4 i 1 \
-rsuDsrcFwdStatus.4 i 4
+    ((fwd_index++))
+  done
 }
-
-_set_WSMFwdRx5()
-{
-echo
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuDsrcFwdPsid.5 x $WSMFWD_PSID5 \
-rsuDsrcFwdDestIpAddr.5 x $WSMFWD_ADDR \
-rsuDsrcFwdDestPort.5 i $WSMFWD_PORT \
-rsuDsrcFwdProtocol.5 i 2 \
-rsuDsrcFwdRssi.5 i $WSMFWD_RSSI \
-rsuDsrcFwdMsgInterval.5 i 1 \
-rsuDsrcFwdDeliveryStart.5 x $WSMFWD_STRT \
-rsuDsrcFwdDeliveryStop.5 x $WSMFWD_STOP \
-rsuDsrcFwdEnable.5 i 1 \
-rsuDsrcFwdStatus.5 i 4
-}
-
 
 ##############################################################################
 # Immediate Forward table 
 ##############################################################################
 
-_destroy_IMF()
+_destroy_IFM()
 {
 echo
-echo "SNMP: Destroy IMF Table"
-snmpset $RW_AUTH_ARGS \
-rsuIFMStatus.5 i 6 2>/dev/null \
-rsuIFMStatus.4 i 6 2>/dev/null \
-rsuIFMStatus.3 i 6 2>/dev/null \
-rsuIFMStatus.2 i 6 2>/dev/null \
-rsuIFMStatus.1 i 6 2>/dev/null
+echo "${FUNCNAME[0]} "
+for i in {9..1}; do
+  snmpset $RW_AUTH_ARGS rsuIFMStatus.$i i 6
+done
 }
 
-_set_IMF1()
-{
-echo
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuIFMPsid.1 x 000020 \
-rsuIFMDsrcMsgId.1 i 20 \
-rsuIFMTxMode.1 i $TX_MODE \
-rsuIFMTxChannel.1 i $CHAN \
-rsuIFMEnable.1 i 1 \
-rsuIFMStatus.1 i 4
-}
+_set_IFM() {
+  echo
+  echo "${FUNCNAME[0]} "
 
-_set_IMF2()
-{
-echo
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuIFMPsid.2 x 0000bfee \
-rsuIFMDsrcMsgId.2 i 240 \
-rsuIFMTxMode.2 i $TX_MODE \
-rsuIFMTxChannel.2 i $CHAN \
-rsuIFMEnable.2 i 1 \
-rsuIFMStatus.2 i 4
-}
- 
-_set_IMF3()
-{
-echo
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuIFMPsid.3 x 0000bfee \
-rsuIFMDsrcMsgId.3 i 241 \
-rsuIFMTxMode.3 i $TX_MODE \
-rsuIFMTxChannel.3 i $CHAN \
-rsuIFMEnable.3 i 1 \
-rsuIFMStatus.3 i 4
-}
+  local psid_list=("0x20" "0xBFEE" "0x8003" "0x8010")
+  local ifm_index=1
 
-_set_IMF4()
-{
-echo
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuIFMPsid.4 x 0000bfee \
-rsuIFMDsrcMsgId.4 i 243 \
-rsuIFMTxMode.4 i $TX_MODE \
-rsuIFMTxChannel.4 i $CHAN \
-rsuIFMEnable.4 i 1 \
-rsuIFMStatus.4 i 4
-}
-
-_set_IMF5()
-{
-echo
-echo "${FUNCNAME[0]} "
-snmpset $RW_AUTH_ARGS \
-rsuIFMPsid.5 x 00008003 \
-rsuIFMDsrcMsgId.5 i 244 \
-rsuIFMTxMode.5 i $TX_MODE \
-rsuIFMTxChannel.5 i $CHAN \
-rsuIFMEnable.5 i 1 \
-rsuIFMStatus.5 i 4
+  for psid in "${psid_list[@]}"; do
+    snmpset $RW_AUTH_ARGS \
+      rsuIFMPsid.$ifm_index       x "$psid" \
+      rsuIFMDsrcMsgId.$ifm_index  i 0 \
+      rsuIFMTxMode.$ifm_index     i $TX_MODE \
+      rsuIFMTxChannel.$ifm_index  i $CHAN \
+      rsuIFMEnable.$ifm_index     i 1 \
+      rsuIFMStatus.$ifm_index     i 4
+    echo
+    
+    ((ifm_index++))
+  done
 }
 
 ##############################################################################
 # Main
 ##############################################################################
 echo " "
-_configure_IMF_simulation
+_configure_IFM_simulation
 _detect_host
 _manually_manipulate_rsu_files
 _SYNC
@@ -401,30 +283,19 @@ _SYNC
 _set_standby
 _destroy_WSMFwdRx
 _set_operate
+
 _set_standby
-_set_WSMFwdRx1
-_set_WSMFwdRx2
-_set_WSMFwdRx3
-_set_WSMFwdRx4
-_set_WSMFwdRx5
+_set_WSMFwdRx
 _set_operate
 
 _set_standby
-_destroy_IMF
+_destroy_IFM
+_set_operate
+
 _set_standby
-_set_IMF1
-_set_IMF2
-_set_IMF3
-_set_IMF4
-_set_IMF5
+_set_IFM
 _set_operate
 
 _walk_the_mib
-
-# Connect to ISS SCMS Server
-# systemd-resolve -4 -i eth0 --set-dns=8.8.8.8
-# ssh -4 -v -p 8892 ra.preprod.v2x.isscms.com 2>&1 | grep Conn
-# systemd-resolve -6 -i eth0 --set-dns=2001:4860:4860::8888
-# ssh -6 -v -p 8892 ra.preprod.v2x.isscms.com 2>&1 | grep Conn
 
 exit 0
