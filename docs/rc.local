@@ -19,7 +19,7 @@ fi
 cohda_start()
 {
     # Make sure that /mnt/src/log exists and is writeable
-    mount /dev/mmcblk1 /mnt/src
+    mount /dev/mmcblk1p1 /mnt/src
     mkdir -p /mnt/src/log
     chmod 777 /mnt/src/log
     if [ ! -e /mnt/./ubi/log ]; then
