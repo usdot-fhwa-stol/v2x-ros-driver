@@ -134,14 +134,22 @@ public:
      * @param entry Recevied data reference used to generate test vectors
      */
     bool isValidMsgSize(const std::vector<uint8_t> &msg_vec, size_t start_index, const std::vector<uint8_t> &entry);
-    
+
     /**
-     * @brief Checks msg_id against Provider Service ID (PSID) list to make sure a Wireless Access in Vehicular Environments (WAVE) 
+     * @brief Initial check for msg_id against Provider Service ID (PSID) list to make sure a Wireless Access in Vehicular Environments (WAVE)
      * Short Message Protocol (WSMP) T-Header with valid PSID is not accidentally used instead of WSM Data (MessageFrame + Payload).
-     * IEEE 1609.3 (2020) - Section 8.3 Figure 33 and Section 8.3.3 Table 21, Figure 36 (TPID = 0). 
+     * IEEE 1609.3 (2020) - Section 8.3 Figure 33 and Section 8.3.3 Table 21, Figure 36 (TPID = 0).
      * @param msg_id Message ID under test
      */
-    bool isValidPSID(const std::string &msg_id);
+    bool isPossiblePSID(const std::string &msg_id);
+
+    /**
+     * @brief Final check to ensure a found BSM PSID (0x0020) is not actually PSM DSRCmsgID 32 (0x0020). This is done by looking for the Element ID (0x0380),
+     * followed by the BSM DSRCmsgID 20 (0x0014). Specifically, looking for 0020...0380...0014, else false.
+     * @param start_index Starting index for detected payload within message vector
+     * @param entry Received data reference used to generate test vectors
+     */
+    bool isValidMsgAssumingBSMPSID(size_t start_index, const std::vector<uint8_t> &entry);
 
 private:
     rclcpp::Logger logger_{rclcpp::get_logger("v2x_radio_client")};
