@@ -35,7 +35,7 @@ cp /tmp/rc.local /mnt/rw/
 ```
 7.	Run the setup script:
 ```
-/mnt/src/mk6-rsu-obu-setup.sh
+/mnt/rw/mk6-rsu-obu-setup.sh
 ```
 8.	Reboot the OBU after the script is done executing:
 ```
