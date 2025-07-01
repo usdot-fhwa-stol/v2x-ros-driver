@@ -33,12 +33,18 @@ Password: rsuadmin
 cp /tmp/*.sh /mnt/rw/
 cp /tmp/rc.local /mnt/rw/
 ```
-7.	Run the setup script:
+7. Make the scripts executable
+```
+chmod +x /mnt/rw/*.sh
+chmod +x /mnt/rw/rc.local
+```
+8.	Run the setup script:
 ```
 /mnt/rw/mk6-rsu-obu-setup.sh
 ```
-8.	Reboot the OBU after the script is done executing:
+9.	Reboot the OBU after the script is done executing:
 ```
 reboot
 ```
-9.	OBU is setup to forward to the PC running V2X-ROS-Driver. Additionally, the rc.local script will automatically run the configuration check script at every boot of the device.
+
+OBU is setup to forward to the PC running V2X-ROS-Driver. Additionally, the rc.local script will automatically run the configuration check script at every boot of the device.
