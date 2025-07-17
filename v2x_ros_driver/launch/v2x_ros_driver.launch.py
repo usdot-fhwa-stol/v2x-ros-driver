@@ -57,6 +57,12 @@ def generate_launch_description():
     param_file_path = os.path.join(
         get_package_share_directory('v2x_ros_driver'), 'config/params.yaml')
 
+    param_overwrite_file_path = LaunchConfiguration('param_overwrite_file_path')
+    declare_param_overwrite_file_path_arg = DeclareLaunchArgument(
+        name = 'param_overwrite_file_path',
+        default_value = param_file_path,
+        description = "Path to file containing override parameters for the v2x-ros-driver"
+    )
 
     # Launch node(s) in a carma container to allow logging to be configured
     container = ComposableNodeContainer(
@@ -79,7 +85,10 @@ def generate_launch_description():
                         ("inbound_binary_msg", "comms/inbound_binary_msg"),
                         ("outbound_binary_msg", "comms/outbound_binary_msg"),
                     ],
-                    parameters=[ param_file_path ]
+                    parameters=[ 
+                      param_file_path,
+                      param_overwrite_file_path
+                    ]
             ),
         ],
         on_exit= Shutdown()
@@ -122,6 +131,7 @@ def generate_launch_description():
     return LaunchDescription([
         declare_log_level_arg,
         declare_configuration_delay_arg,
+        declare_param_overwrite_file_path_arg,
         declare_enable_v2x_driver_lifecycle,
         container,
         activate_node_group_action
