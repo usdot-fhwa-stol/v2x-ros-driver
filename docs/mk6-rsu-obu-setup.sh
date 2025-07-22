@@ -50,6 +50,8 @@ sed -i '0,/board/I!d' /mnt/rw/rsu1609/conf/stack.conf
 echo " " >> /mnt/rw/rsu1609/conf/stack.conf
 sync
 
+echo "Using user input: SecurityEnable = $1"
+
 if [[ $HOSTNAME =~ MK5 ]]; then
   echo "TxALogEnableFlag           = 1"     >> /mnt/rw/rsu1609/conf/stack.conf
   echo "RxALogEnableFlag           = 1"     >> /mnt/rw/rsu1609/conf/stack.conf
@@ -73,7 +75,7 @@ fi
   echo "Cohda_DebugTimeLevel       = 1"     >> /mnt/rw/rsu1609/conf/stack.conf
   echo "Cohda_DebugInfoLevel       = 2"     >> /mnt/rw/rsu1609/conf/stack.conf
 
-  echo "SecurityEnable             = 1"     >> /mnt/rw/rsu1609/conf/stack.conf
+  echo "SecurityEnable             = $1"     >> /mnt/rw/rsu1609/conf/stack.conf
 
   echo "Cohda_Crypto_TestCountryCode = 840" >> /mnt/rw/rsu1609/conf/stack.conf
   echo "Cohda_Crypto_AeroLogging     = all" >> /mnt/rw/rsu1609/conf/stack.conf
@@ -102,7 +104,7 @@ if [[ $HOSTNAME =~ MK[5-6] ]]; then
   sync
   net-snmp-config --create-snmpv3-user -A $PW0 -X $PW0 -a SHA -x AES $ID0 
 
-  _edit_stack_conf
+  _edit_stack_conf $1
   rm -rf /mnt/rw/rsu1609/conf/user.conf 
   sync
 
@@ -113,6 +115,16 @@ if [[ $HOSTNAME =~ MK[5-6] ]]; then
 fi
 }
 
+read_valid() {
+    local val
+    while :; do
+        read -rp "Enter SecurityEnable (0 or 1) i.e., disabled=0, enabled=1: " val
+        case "$val" in
+            0|1) printf '%s' "$val"; return 0 ;;
+            *)   printf 'Invalid. Try again.\n' >&2 ;;
+        esac
+    done
+}
 
 ##############################################################################
 # Helper Functions
@@ -277,7 +289,18 @@ _set_IFM() {
 echo " "
 _configure_IFM_simulation
 _detect_host
-_manually_manipulate_rsu_files
+
+# If $1 provided, validate it; otherwise prompt.
+if [[ $# -gt 0 ]]; then
+    case "$1" in
+        0|1) input="$1" ;;
+        *)   printf 'Error: arg must be 0 or 1\n' >&2; exit 1 ;;
+    esac
+else
+    input="$(read_valid)"
+fi
+
+_manually_manipulate_rsu_files "$input"
 _SYNC
 
 _set_standby
