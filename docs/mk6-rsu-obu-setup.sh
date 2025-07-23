@@ -115,6 +115,8 @@ if [[ $HOSTNAME =~ MK[5-6] ]]; then
 fi
 }
 
+# Function to read a valid input for SecurityEnable
+# It will keep prompting until a valid input (0 or 1) is provided
 read_valid() {
     local val
     while :; do
@@ -290,7 +292,7 @@ echo " "
 _configure_IFM_simulation
 _detect_host
 
-# If $1 provided, validate it; otherwise prompt.
+# If $1 provided, validate it; otherwise prompt. An argument of 0 or 1 for SecurityEnabled (disabled/enabled, respectively) is expected.
 if [[ $# -gt 0 ]]; then
     case "$1" in
         0|1) input="$1" ;;
