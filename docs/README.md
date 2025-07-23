@@ -3,6 +3,8 @@
 The Cohda MK6 OBU can be configured using the [mk6-rsu-obu-setup.sh](mk6-rsu-obu-setup.sh) script.
 We have observed occasional clearing of the configuration, so a separate script will be run to ensure the configurations exist.
 
+Additionally, SecurityEnable is defaulted to 0 (disabled). To enable security (signed messages), manually run [mk6-rsu-obu-setup.sh](mk6-rsu-obu-setup.sh) with 1 as an argument.
+
 **Note**: This driver assumes the OBU IPv4 address is set to: 192.168.88.40/24.
 
 
@@ -38,9 +40,9 @@ cp /tmp/rc.local /mnt/rw/
 chmod +x /mnt/rw/*.sh
 chmod +x /mnt/rw/rc.local
 ```
-8.	Run the setup script:
+8.	Run the setup script (with security disabled):
 ```
-/mnt/rw/mk6-rsu-obu-setup.sh
+/mnt/rw/mk6-rsu-obu-setup.sh 0
 ```
 9.	Reboot the OBU after the script is done executing:
 ```
