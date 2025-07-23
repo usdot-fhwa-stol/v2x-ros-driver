@@ -141,7 +141,8 @@ echo "Summary: $PASSED passed, $FAILED failed"
 if [ $FAILED -ne 0 ]; then
     echo "Some SNMP table values did not match the expected configuration."
     echo "Running mk6-rsu-obu-setup.sh to reconfigure..."
-    /mnt/rw/mk6-rsu-obu-setup.sh
+    echo "Defaulting to SecurityEnable = 0"
+    /mnt/rw/mk6-rsu-obu-setup.sh 0
     
     exit 1
 else
