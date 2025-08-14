@@ -3,10 +3,8 @@
 ##############################################################################
 # Default settings, no change needed if running this script locally
 ##############################################################################
-#set -x 
 export ID0="rsu"
 export PW0="rsuadmin"
-export MIB_DIR="/home/duser/vm_share/fw_Release/docs/RSU/mibs/"
 export HOSTNAME=$(cat /etc/hostname)
 export SUT_IPV6_ADDR="::1"
 export IP="udp6:[$SUT_IPV6_ADDR]:161"
@@ -22,20 +20,14 @@ REMOTE_IP="192.168.88.10"
 REMOTE_PORT="5398"
 
 ##############################################################################
-# Detecting Environment
+# Setting Environment
 ##############################################################################
-_detect_host()
+_set_host()
 {
-  if [ "$HOSTNAME" == "MKx-SDK" ]; then
-    export DIR="$MIB_DIR"
-  elif [[ $HOSTNAME =~ MK[5-6] ]]; then
-    FW_REV=$(fim -l | grep AR | awk '{print $3}')
-    echo "Running $FW_REV"
-    DIR="/mnt/rw/rsu1609/snmp/mibs/"
-  else
-    echo "Host not recognized"
-    exit 1
-  fi
+  FW_REV=$(fim -l | grep AR | awk '{print $3}')
+  echo "Running $FW_REV"
+  DIR="/mnt/rw/rsu1609/snmp/mibs/"
+
   export RW_AUTH_ARGS="-Le -t10 -r3 -v3 -lauthPriv -M $DIR -m RSU-MIB -u $ID0 -A $PW0 -X $PW0 -aSHA -xAES $IP"
 }
 
@@ -51,11 +43,6 @@ echo " " >> /mnt/rw/rsu1609/conf/stack.conf
 sync
 
 echo "Using user input: SecurityEnable = $1"
-
-if [[ $HOSTNAME =~ MK5 ]]; then
-  echo "TxALogEnableFlag           = 1"     >> /mnt/rw/rsu1609/conf/stack.conf
-  echo "RxALogEnableFlag           = 1"     >> /mnt/rw/rsu1609/conf/stack.conf
-fi
 
 if [[ $CHAN == 180 ]]; then
   echo "WSMP_LLIF                  = 6"     >> /mnt/rw/rsu1609/conf/stack.conf
@@ -95,22 +82,20 @@ if [[ $HOSTNAME =~ MK[5-6] ]]; then
   echo "Performing manual setup that cannot be accomplished via SNMP"
 
   echo "stopping application(s)"
-  systemctl disable cw-mkx-application.service && sync && systemctl stop cw-mkx-application
   /opt/cohda/application/rc.local stop &>/dev/null
   sync
 
   #clean, add SNMP user
   sed -i '0,/agentXTimeout/I!d' /mnt/rw/rsu1609/snmp/snmpd.conf
   sync
-  net-snmp-config --create-snmpv3-user -A $PW0 -X $PW0 -a SHA -x AES $ID0 
+  net-snmp-config --create-snmpv3-user -A $PW0 -X $PW0 -a SHA -x AES $ID0
 
   _edit_stack_conf $1
-  rm -rf /mnt/rw/rsu1609/conf/user.conf 
+  rm -rf /mnt/rw/rsu1609/conf/user.conf
   sync
 
   echo "starting application(s)"
   /opt/cohda/application/rc.local start &>/dev/null
-  systemctl enable cw-mkx-application.service && sync && systemctl start cw-mkx-application
   _detect_rsu1609_running
 fi
 }
@@ -142,7 +127,7 @@ _detect_rsu1609_running()
     done
 
   sleep 1
-  sync  
+  sync
   echo "rsu1609 successfully started!"
 }
 
@@ -176,24 +161,16 @@ _walk_the_mib()
 {
 echo " "
 echo "${FUNCNAME[0]} "
-snmpwalk $RW_AUTH_ARGS iso.0.15628.4.1 
-}
-
-_configure_IFM_simulation()
-{
-find . -name "cw_*.txt" 2>/dev/null | xargs sed -i "s/Signature=.*/Signature=False/"
-find . -name "cw_*.txt" 2>/dev/null | xargs sed -i "s/TxChannel.*/TxChannel=${CHAN}/"
-find . -name "cw_*.txt" 2>/dev/null | xargs sed -i "s/TxMode.*/TxMode=CONT/"
-sync
+snmpwalk $RW_AUTH_ARGS iso.0.15628.4.1
 }
 
 to_hex()
 {
   local hex_ip="000000000000000000000000"
-  
+
   # Split the IP address into its four octets
   IFS='.' read -r -a octets <<< "$1"
-  
+
   # Convert each octet to hex and concatenate
   for octet in "${octets[@]}";
   do
@@ -222,7 +199,7 @@ _destroy_WSMFwdRx()
 echo " "
 echo "${FUNCNAME[0]} "
 for i in {9..1}; do
-  snmpset $RW_AUTH_ARGS rsuDsrcFwdStatus.$i i 6 1>/dev/null
+  snmpset $RW_AUTH_ARGS rsuDsrcFwdStatus.$i i 6 &>/dev/null
 done
 }
 
@@ -252,7 +229,7 @@ _set_WSMFwdRx() {
 }
 
 ##############################################################################
-# Immediate Forward table 
+# Immediate Forward table
 ##############################################################################
 
 _destroy_IFM()
@@ -260,7 +237,7 @@ _destroy_IFM()
 echo
 echo "${FUNCNAME[0]} "
 for i in {9..1}; do
-  snmpset $RW_AUTH_ARGS rsuIFMStatus.$i i 6
+  snmpset $RW_AUTH_ARGS rsuIFMStatus.$i i 6 &>/dev/null
 done
 }
 
@@ -280,7 +257,7 @@ _set_IFM() {
       rsuIFMEnable.$ifm_index     i 1 \
       rsuIFMStatus.$ifm_index     i 4
     echo
-    
+
     ((ifm_index++))
   done
 }
@@ -288,9 +265,8 @@ _set_IFM() {
 ##############################################################################
 # Main
 ##############################################################################
-echo " "
-_configure_IFM_simulation
-_detect_host
+echo
+_set_host
 
 # If $1 provided, validate it; otherwise prompt. An argument of 0 or 1 for SecurityEnabled (disabled/enabled, respectively) is expected.
 if [[ $# -gt 0 ]]; then
