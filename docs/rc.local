@@ -35,7 +35,7 @@ cohda_start()
     rsync -av ${DIR}/sys /mnt/./rw
 
     ${DIR}/${RSU} start rsu
-    /mnt/rw/check-mk6-conf.sh
+    /mnt/rw/check-mk6-filtered-conf.sh
 }
 
 cohda_stop()
