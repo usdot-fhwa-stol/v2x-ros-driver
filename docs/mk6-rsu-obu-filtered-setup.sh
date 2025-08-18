@@ -207,7 +207,7 @@ _set_WSMFwdRx() {
   echo
   echo "${FUNCNAME[0]} "
 
-  local psid_list=("0x8010" "0xBFEE")
+  local psid_list=("0x8010" "0xBFEE" "0x8003")
   local fwd_index=1
 
   for psid in "${psid_list[@]}"; do
