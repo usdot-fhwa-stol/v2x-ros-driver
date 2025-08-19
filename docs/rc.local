@@ -35,7 +35,9 @@ cohda_start()
     rsync -av ${DIR}/sys /mnt/./rw
 
     ${DIR}/${RSU} start rsu
-    /mnt/rw/check-mk6-filtered-conf.sh
+    # Set configuration checking script to check for filtered configuration
+    # Options: (typical|filtered)
+    /mnt/rw/check-mk6-conf.sh filtered
 }
 
 cohda_stop()

@@ -100,19 +100,6 @@ if [[ $HOSTNAME =~ MK[5-6] ]]; then
 fi
 }
 
-# Function to read a valid input for SecurityEnable
-# It will keep prompting until a valid input (0 or 1) is provided
-read_valid() {
-    local val
-    while :; do
-        read -rp "Enter SecurityEnable (0 or 1) i.e., disabled=0, enabled=1: " val
-        case "$val" in
-            0|1) printf '%s' "$val"; return 0 ;;
-            *)   printf 'Invalid. Try again.\n' >&2 ;;
-        esac
-    done
-}
-
 ##############################################################################
 # Helper Functions
 ##############################################################################
@@ -180,6 +167,32 @@ to_hex()
   echo $hex_ip
 }
 
+# Read a valid input for SecurityEnable
+# It will keep prompting until a valid input (0 or 1) is provided
+read_valid() {
+    local val
+    while :; do
+        read -rp "Enter SecurityEnable (0 or 1) i.e., disabled=0, enabled=1: " val
+        case "$val" in
+            0|1) printf '%s' "$val"; return 0 ;;
+            *)   printf 'Invalid. Try again.\n' >&2 ;;
+        esac
+    done
+}
+
+# Read a valid input for the WSM PSID list
+# It will keep prompting until a valid input (typical or filtered) is provided
+read_profile() {
+  local val
+  while :; do
+    read -rp "Select WSM forward profile (typical|filtered): " val
+    case "$val" in
+      typical|filtered) printf '%s' "$val"; return 0 ;;
+      *) printf 'Invalid. Enter "typical" or "filtered".\n' >&2 ;;
+    esac
+  done
+}
+
 ##############################################################################
 # WSMFwdRx table
 ##############################################################################
@@ -207,8 +220,16 @@ _set_WSMFwdRx() {
   echo
   echo "${FUNCNAME[0]} "
 
-  local psid_list=("0x8010" "0xBFEE" "0x8003")
+  local psid_list_filtered=("0x8010" "0xBFEE" "0x8003")
+  local psid_list_typical=("0x20" "0x27" "0x8003" "0x8010" "0xBFEE")
+  local psid_list=()
   local fwd_index=1
+
+  if [[ "$1" == "filtered" ]]; then
+    psid_list=("${psid_list_filtered[@]}")
+  else
+    psid_list=("${psid_list_typical[@]}")
+  fi
 
   for psid in "${psid_list[@]}"; do
     snmpset $RW_AUTH_ARGS \
@@ -268,14 +289,33 @@ _set_IFM() {
 echo
 _set_host
 
-# If $1 provided, validate it; otherwise prompt. An argument of 0 or 1 for SecurityEnabled (disabled/enabled, respectively) is expected.
-if [[ $# -gt 0 ]]; then
-    case "$1" in
-        0|1) input="$1" ;;
-        *)   printf 'Error: arg must be 0 or 1\n' >&2; exit 1 ;;
-    esac
-else
-    input="$(read_valid)"
+# Args:
+#   $1: SecurityEnable (0=disabled, 1=enabled)
+#   $2: WSM forward profile (typical|filtered)
+
+input=""
+sec_input=""
+
+if [[ $# -ge 1 ]]; then
+  case "$1" in
+    0|1) input="$1" ;;
+    *)   printf 'Error: arg1 must be 0 or 1\n' >&2; exit 1 ;;
+  esac
+fi
+
+if [[ $# -ge 2 ]]; then
+  case "$2" in
+    typical|filtered) sec_input="$2" ;;
+    *)   printf 'Error: arg2 must be "typical" or "filtered"\n' >&2; exit 1 ;;
+  esac
+fi
+
+if [[ -z "$input" ]]; then
+  input="$(read_valid)"
+fi
+
+if [[ -z "$sec_input" ]]; then
+  sec_input="$(read_profile)"
 fi
 
 _manually_manipulate_rsu_files "$input"
@@ -286,7 +326,7 @@ _destroy_WSMFwdRx
 _set_operate
 
 _set_standby
-_set_WSMFwdRx
+_set_WSMFwdRx "$sec_input"
 _set_operate
 
 _set_standby
