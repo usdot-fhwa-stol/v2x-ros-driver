@@ -143,7 +143,7 @@ if [ $FAILED -ne 0 ]; then
     echo "Running mk6-rsu-obu-setup.sh to reconfigure..."
     echo "Defaulting to SecurityEnable = 0"
     /mnt/rw/mk6-rsu-obu-setup.sh 0
-    
+
     exit 1
 else
     exit 0
