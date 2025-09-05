@@ -46,7 +46,7 @@ def grab_payload(data: bytes):
     bytes
         The extracted payload, or None if not found.
     """
-    # BSM and SDSM DSRCmsgIDs as bytes
+    # BSM and SDSM DSRCmsgIDs as bytes, respectively
     msg_ids = (b"\x00\x14", b"\x00\x29")
     for id in msg_ids:
         idx = data.find(id)
