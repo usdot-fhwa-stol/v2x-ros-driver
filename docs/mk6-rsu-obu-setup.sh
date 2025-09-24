@@ -58,7 +58,7 @@ fi
   echo "WBSS_WSA_RepeatRate        = 5"     >> /mnt/rw/rsu1609/conf/stack.conf
 
   echo "Cohda_PCAP_LoggingDisabled = 0"     >> /mnt/rw/rsu1609/conf/stack.conf
-  echo "Cohda_DebugLevel           = 6"     >> /mnt/rw/rsu1609/conf/stack.conf
+  echo "Cohda_DebugLevel           = 4"     >> /mnt/rw/rsu1609/conf/stack.conf
   echo "Cohda_DebugTimeLevel       = 1"     >> /mnt/rw/rsu1609/conf/stack.conf
   echo "Cohda_DebugInfoLevel       = 2"     >> /mnt/rw/rsu1609/conf/stack.conf
 
@@ -72,7 +72,7 @@ fi
   echo "WSMP_ChannelNumber         = $CHAN" >> /mnt/rw/rsu1609/conf/stack.conf
   echo "ContinuousChanNum          = $CHAN" >> /mnt/rw/rsu1609/conf/stack.conf
   echo "ForcedSerChanNum           = $CHAN" >> /mnt/rw/rsu1609/conf/stack.conf
-  echo "ForcedcontrolChanNum       = $CHAN" >> /mnt/rw/rsu1609/conf/stack.conf
+  echo "ForcedControlChanNum       = $CHAN" >> /mnt/rw/rsu1609/conf/stack.conf
 }
 
 _manually_manipulate_rsu_files()
@@ -207,7 +207,7 @@ _set_WSMFwdRx() {
   echo
   echo "${FUNCNAME[0]} "
 
-  local psid_list=("0x20" "0x27" "0x8003" "0x8010" "0xBFEE")
+  local psid_list=("0x20" "0x27" "0x8002" "0x8003" "0x8010" "0xBFEE" "0xE0000017")
   local fwd_index=1
 
   for psid in "${psid_list[@]}"; do
