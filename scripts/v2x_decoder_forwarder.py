@@ -102,6 +102,7 @@ def main():
                     forward_sock.sendto(decoded_msg.encode(), (args.fwd_ip, args.fwd_port))
                 except Exception as e:
                     print(f"Error forwarding JSON: {e}")
+                    continue
 
         except KeyboardInterrupt:
             print("\nKeyboard interrupt, shutting down")
