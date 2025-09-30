@@ -93,7 +93,7 @@ def main():
                     # Decode using cached MessageFrame
                     MessageFrame.from_uper(payload)
                     decoded_msg = MessageFrame.to_jer()
-                except Exception as e:
+                except Exception:
                     continue
                 print(decoded_msg)
 

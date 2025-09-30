@@ -4,6 +4,7 @@ Accepted inputs are UPER-encoded using the SAE J2735 2024-09 ASN.1 and are recei
 
 ## Requirements
 * pycrate>=0.7.11
+* J2735_202409
 ```
 pip3 install pycrate
 ```
@@ -11,6 +12,8 @@ To upgrade pycrate:
 ```
 pip3 install pycrate --upgrade
 ```
+
+Download the [J2735_202409.py](https://github.com/usdot-fhwa-stol/j2735decoder/blob/develop/src/J2735_202409.py) file and move it to this directory.
 
 ## Usage
 1. Run the script:
