@@ -15,7 +15,7 @@ pip3 install pycrate --upgrade
 
 Download the [j2735_202409 wheel](https://github.com/usdot-fhwa-stol/j2735decoder/blob/develop/wheels/j2735_202409-0.1.0-py3-none-any.whl) file and install it.
 ```sh
-pip3 install j2735_2024*.whl
+pip3 install j2735_202409*.whl
 ```
 
 ## Usage
