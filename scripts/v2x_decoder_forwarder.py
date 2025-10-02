@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import socket
-import J2735_202409
+import j2735_202409
 
 # Monkey-patch imports to control JSON encoding behavior used by to_jer()
 import pycrate_asn1rt.asnobj
@@ -65,7 +65,7 @@ def main():
     print(f"Waiting for data at {args.ip}:{args.port}...")
 
     # Cache the MessageFrame outside the loop
-    MessageFrame = J2735_202409.MessageFrame.MessageFrame
+    MessageFrame = j2735_202409.MessageFrame.MessageFrame
 
     # Reuse both inbound and forward sockets
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock, \
