@@ -18,7 +18,7 @@
 
 #include <iostream>
 #include <functional>
-#include "v2x_ros_driver/v2x_radio_client.h"
+#include "v2x_ros_driver/udp_radio_client.h"
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
@@ -36,7 +36,7 @@ TEST(V2XRadioClient, testSocket)
 
 TEST(V2XRadioClient,testConnection)
 {
-    V2XDriverApplication::V2XRadioClient v2x_radio_client_;
+    V2XDriverApplication::UdpRadioClient v2x_radio_client_;
     boost::system::error_code ec;
 
     ASSERT_FALSE(v2x_radio_client_.connected());
@@ -57,7 +57,7 @@ TEST(V2XRadioClient,testConnection)
 
 TEST(V2XRadioClient,testValidateMsgId)
 {
-    V2XDriverApplication::V2XRadioClient v2x_radio_client_;
+    V2XDriverApplication::UdpRadioClient v2x_radio_client_;
     //No valid msg_id loaded yet
     uint16_t msg_id = 20;
     ASSERT_FALSE(v2x_radio_client_.IsValidMsgID(std::to_string(msg_id)));
@@ -91,7 +91,7 @@ TEST(V2XRadioClient,testValidateMsgId)
 }
 TEST(V2XRadioClient,testsendV2xMessage)
 {
-    V2XDriverApplication::V2XRadioClient v2x_radio_client_;
+    V2XDriverApplication::UdpRadioClient v2x_radio_client_;
     std::shared_ptr<std::vector<uint8_t>> messagePtr;
     std::vector<uint8_t> message =
      {0, 243, 124, 29, 89, 212, 226, 212, 58, 179, 169, 197, 168,
@@ -109,7 +109,7 @@ TEST(V2XRadioClient,testsendV2xMessage)
 }
 TEST(V2XRadioClient,testIsValidMsgSize)
 {
-    V2XDriverApplication::V2XRadioClient v2x_radio_client_;
+    V2XDriverApplication::UdpRadioClient v2x_radio_client_;
     size_t start_index = 0;
 
     // Case 1: Message vector too short (msg_vec.size() < 3)

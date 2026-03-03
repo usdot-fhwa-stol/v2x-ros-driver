@@ -27,6 +27,7 @@ ENV ROS2_PACKAGES=${ROS2_PACKAGES}
 RUN mkdir ~/src
 COPY --chown=carma . /home/carma/src/
 RUN ~/src/docker/checkout.bash -b ${GIT_BRANCH}
+RUN sudo apt-get update && sudo apt-get install -y libmosquitto-dev 
 RUN ~/src/docker/install.sh
 
 # Final image
