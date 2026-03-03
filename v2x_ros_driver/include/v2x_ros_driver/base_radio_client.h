@@ -43,9 +43,7 @@ public:
     BaseRadioClient();
     virtual ~BaseRadioClient();
 
-    // ────────────────────────────────────────────────────────────────
-    //  Abstract transport methods (pure virtual — subclasses MUST override)
-    // ────────────────────────────────────────────────────────────────
+    //  Abstract transport methods 
 
     /**
      * @brief Connects the driver to the radio/broker
@@ -81,9 +79,7 @@ public:
      */
     virtual bool sendV2xMessage(const std::shared_ptr<std::vector<uint8_t>> &message) = 0;
 
-    // ────────────────────────────────────────────────────────────────
-    //  Signals (public — triggered by subclasses)
-    // ────────────────────────────────────────────────────────────────
+    //  Signals
 
     /** @brief Signaled when client is connected to a V2X radio device */
     boost::signals2::signal<void()> onConnect;
@@ -97,9 +93,7 @@ public:
     /** @brief Signaled when message received */
     boost::signals2::signal<void(std::vector<uint8_t> const &, uint16_t id)> onMessageReceived;
 
-    // ────────────────────────────────────────────────────────────────
-    //  Shared validation / utility methods (public, with implementations)
-    // ────────────────────────────────────────────────────────────────
+    //  Shared validation
 
     /** @brief Validate possible DSRCmsgID against loaded wave config */
     bool IsValidMsgID(const std::string &msg_id);
@@ -152,4 +146,4 @@ protected:
     static const int short_frame_ = 3;
 };
 
-} // namespace V2XDriverApplication
+}

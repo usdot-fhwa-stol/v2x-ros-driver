@@ -58,7 +58,6 @@
 #include <map>
 #include <set>
 
-// Use the new base + subclass headers
 #include "v2x_ros_driver/base_radio_client.h"
 #include "v2x_ros_driver/udp_radio_client.h"
 #include "v2x_ros_driver/mqtt_radio_client.h"
@@ -124,7 +123,6 @@ private:
 
     std::vector<WaveConfigStruct> wave_cfg_items_;
 
-    // ── Polymorphic radio client ──
     std::unique_ptr<BaseRadioClient> radio_client_;
     boost::system::error_code radio_client_error_;
     uint32_t queue_size_ = 100;
@@ -201,4 +199,4 @@ private:
     void createRadioClient();
 };
 
-} // namespace V2XDriverApplication
+}

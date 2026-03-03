@@ -23,14 +23,11 @@
 namespace V2XDriverApplication
 {
 
-// ────────────────────────────────────────────────────────────────
 //  Static library reference count for mosquitto_lib_init/cleanup
-// ────────────────────────────────────────────────────────────────
+
 std::atomic<int> MqttRadioClient::lib_ref_count_{0};
 
-// ────────────────────────────────────────────────────────────────
 //  Construction / Destruction
-// ────────────────────────────────────────────────────────────────
 
 MqttRadioClient::MqttRadioClient()
 {
@@ -53,9 +50,7 @@ MqttRadioClient::~MqttRadioClient()
     }
 }
 
-// ────────────────────────────────────────────────────────────────
 //  MQTT-specific configuration
-// ────────────────────────────────────────────────────────────────
 
 void MqttRadioClient::setMqttConfig(const std::string &client_id,
                                     int qos,
@@ -68,9 +63,7 @@ void MqttRadioClient::setMqttConfig(const std::string &client_id,
     mqtt_topic_prefix_ = mqtt_topic_prefix;
 }
 
-// ────────────────────────────────────────────────────────────────
 //  Connect
-// ────────────────────────────────────────────────────────────────
 
 bool MqttRadioClient::connect(const std::string &remote_address,
                               unsigned short remote_port,
@@ -101,11 +94,11 @@ bool MqttRadioClient::connect(const std::string &remote_address,
     mosquitto_disconnect_callback_set(mosq_, &MqttRadioClient::onDisconnectCb);
     mosquitto_message_callback_set(mosq_, &MqttRadioClient::onMessageCb);
 
-    // Configure automatic reconnection with exponential backoff
+    // Configure automatic reconnection
     mosquitto_reconnect_delay_set(mosq_,
-                                  static_cast<unsigned int>(reconnect_interval_sec_),                // delay
-                                  static_cast<unsigned int>(reconnect_interval_sec_ * 10),           // delay_max
-                                  true);                                                             // exponential backoff
+                                  static_cast<unsigned int>(reconnect_interval_sec_)
+                                  static_cast<unsigned int>(reconnect_interval_sec_ * 10),
+                                  true);
 
     // Start the threaded network loop (handles reconnects automatically)
     int rc = mosquitto_loop_start(mosq_);
@@ -138,9 +131,7 @@ bool MqttRadioClient::connect(const std::string &remote_address,
     return true;
 }
 
-// ────────────────────────────────────────────────────────────────
 //  Close
-// ────────────────────────────────────────────────────────────────
 
 void MqttRadioClient::close()
 {
@@ -155,9 +146,7 @@ void MqttRadioClient::close()
     onDisconnect();
 }
 
-// ────────────────────────────────────────────────────────────────
 //  Send (publish)
-// ────────────────────────────────────────────────────────────────
 
 bool MqttRadioClient::sendV2xMessage(const std::shared_ptr<std::vector<uint8_t>> &message)
 {
@@ -199,9 +188,7 @@ bool MqttRadioClient::sendV2xMessage(const std::shared_ptr<std::vector<uint8_t>>
     return true;
 }
 
-// ────────────────────────────────────────────────────────────────
 //  Mosquitto callbacks (static trampolines)
-// ────────────────────────────────────────────────────────────────
 
 void MqttRadioClient::onConnectCb(struct mosquitto * /*mosq*/, void *userdata, int rc)
 {
@@ -222,9 +209,7 @@ void MqttRadioClient::onMessageCb(struct mosquitto * /*mosq*/, void *userdata,
     self->handleMessage(msg);
 }
 
-// ────────────────────────────────────────────────────────────────
 //  Instance-level callback handlers
-// ────────────────────────────────────────────────────────────────
 
 void MqttRadioClient::handleConnect(int rc)
 {
@@ -272,9 +257,7 @@ void MqttRadioClient::handleMessage(const struct mosquitto_message *msg)
     process(data);
 }
 
-// ────────────────────────────────────────────────────────────────
 //  Topic helpers
-// ────────────────────────────────────────────────────────────────
 
 void MqttRadioClient::subscribeToTopics()
 {
@@ -312,4 +295,4 @@ std::string MqttRadioClient::buildSubscribeTopic() const
     return mqtt_topic_prefix_ + "/ind/J2735/#";
 }
 
-} // namespace V2XDriverApplication
+}

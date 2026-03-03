@@ -56,12 +56,12 @@ public:
     UdpRadioClient();
     ~UdpRadioClient() override;
 
-    // ── BaseRadioClient abstract overrides ──
+    // BaseRadioClient abstracts
 
     bool connect(const std::string &remote_address, unsigned short remote_port,
                  unsigned short local_port, boost::system::error_code &ec) override;
 
-    using BaseRadioClient::connect; // pull in convenience overload
+    using BaseRadioClient::connect;
 
     void close() override;
 
@@ -82,4 +82,4 @@ private:
     std::unique_ptr<cav::UDPListener> udp_listener_;
 };
 
-} // namespace V2XDriverApplication
+}

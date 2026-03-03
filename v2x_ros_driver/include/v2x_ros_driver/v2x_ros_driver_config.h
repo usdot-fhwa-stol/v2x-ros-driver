@@ -29,7 +29,6 @@ namespace V2XDriverApplication
   struct Config
   {
     // ── Protocol selection ──
-    //! "udp" (default, existing Cohda/Commsignia/Kapsch) or "mqtt" (Ettifos)
     std::string protocol = "udp";
 
     // ── Existing UDP parameters ──
@@ -40,8 +39,8 @@ namespace V2XDriverApplication
     // ── New MQTT parameters ──
     std::string broker_address = "localhost";
     int broker_port = 1883;
-    std::string client_id = "";               // empty = auto-generated
-    int qos_default = 0;                      // 0 = fire-and-forget
+    std::string client_id = "";
+    int qos_default = 0;
     int reconnect_interval_sec = 5;
     std::string mqtt_topic_prefix = "Ettifos/V2X";
 

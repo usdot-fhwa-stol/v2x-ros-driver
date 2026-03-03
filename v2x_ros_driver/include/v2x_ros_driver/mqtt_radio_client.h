@@ -43,7 +43,7 @@ public:
     MqttRadioClient();
     ~MqttRadioClient() override;
 
-    // ── MQTT-specific configuration (call before connect()) ──
+    // MQTT-specific configuration
 
     /**
      * @brief Set MQTT-specific parameters before calling connect().
@@ -57,7 +57,7 @@ public:
                        int reconnect_interval_sec,
                        const std::string &mqtt_topic_prefix = "Ettifos/V2X");
 
-    // ── BaseRadioClient abstract overrides ──
+    // BaseRadioClient abstract
 
     /**
      * @brief Connects to the MQTT broker on the Ettifos OBU.
@@ -84,7 +84,7 @@ public:
 
 private:
 
-    // ── Mosquitto callbacks (static trampolines → instance methods) ──
+    // Mosquitto callbacks
 
     static void onConnectCb(struct mosquitto *mosq, void *userdata, int rc);
     static void onDisconnectCb(struct mosquitto *mosq, void *userdata, int rc);
@@ -103,8 +103,6 @@ private:
     /** @brief Build the inbound subscription topic (wildcard) */
     std::string buildSubscribeTopic() const;
 
-    // ── Members ──
-
     struct mosquitto *mosq_{nullptr};
     std::atomic<bool> connected_{false};
 
@@ -122,4 +120,4 @@ private:
     static std::atomic<int> lib_ref_count_;
 };
 
-} // namespace V2XDriverApplication
+}

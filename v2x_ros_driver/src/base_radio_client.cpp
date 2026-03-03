@@ -38,9 +38,7 @@ bool BaseRadioClient::connect(const std::string &remote_address,
     return connect(remote_address, remote_port, local_port, ignored_ec);
 }
 
-// ────────────────────────────────────────────────────────────────
-//  Shared message processing (called by subclass receive callbacks)
-// ────────────────────────────────────────────────────────────────
+//  Shared message processing
 
 void BaseRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &data)
 {
@@ -87,9 +85,7 @@ void BaseRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> 
     }
 }
 
-// ────────────────────────────────────────────────────────────────
 //  Message-size validation
-// ────────────────────────────────────────────────────────────────
 
 bool BaseRadioClient::isValidMsgSize(const std::vector<uint8_t> &msg_vec,
                                      size_t start_index,
@@ -112,9 +108,7 @@ bool BaseRadioClient::isValidMsgSize(const std::vector<uint8_t> &msg_vec,
     return false;
 }
 
-// ────────────────────────────────────────────────────────────────
 //  PSID / DSRCmsgID checks
-// ────────────────────────────────────────────────────────────────
 
 bool BaseRadioClient::isPossiblePSID(const std::string &msg_id)
 {
@@ -167,9 +161,7 @@ bool BaseRadioClient::IsValidMsgID(const std::string &msg_id)
     return false;
 }
 
-// ────────────────────────────────────────────────────────────────
 //  Wave config loading
-// ────────────────────────────────────────────────────────────────
 
 void BaseRadioClient::set_wave_file_path(const std::string &path)
 {
@@ -253,9 +245,7 @@ void BaseRadioClient::loadWaveConfigIds(const std::string &fileName)
     }
 }
 
-// ────────────────────────────────────────────────────────────────
 //  PSID lookup helper
-// ────────────────────────────────────────────────────────────────
 
 std::string BaseRadioClient::psidForDsrcMsgId(const std::string &dsrc_msg_id) const
 {
@@ -269,4 +259,4 @@ std::string BaseRadioClient::psidForDsrcMsgId(const std::string &dsrc_msg_id) co
     return "";
 }
 
-} // namespace V2XDriverApplication
+}
