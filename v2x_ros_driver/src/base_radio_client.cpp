@@ -91,13 +91,21 @@ bool BaseRadioClient::isValidMsgSize(const std::vector<uint8_t> &msg_vec,
                                      size_t start_index,
                                      const std::vector<uint8_t> &entry)
 {
+    // If message vector is 128 bytes or larger, length field will be 2 bytes
     if (msg_vec.size() > 127)
     {
         auto tmp_start_index = start_index + long_frame_;
         std::vector<uint8_t> long_vec(entry.begin() + tmp_start_index, entry.end());
+        // Allows creation of msg_size from two bytes. e.g., [0 20 129 9 ...], we want to combine bytes 2 and 3 from this vector to create msg_size = 0x0109.
+        // msg_vec[2] is hex value of 129 (0x81) and msg_vec[3] is hex value of 9 (0x09).
+        // Per IEEE 1609.3, we will always have a value of "8" as the most significant value in the message size, if payload size > 128 bytes.
+        // So, we bitwise AND (&) the value of msg_vec[2] with 0x7f (01111111) to drop the most significant bit, turning 0x81 (10000001) to 0x01 (00000001).
+        // Because we need to merge two bytes, we cast the values to an unsigned 16-bit integer.
+        // First byte is shifted to the left 8 bits (0x0001 is now 0x0100), followed by a bitwise OR (|) with msg_vec[3], combining 0x0100 and 0x0009 to create 0x0109.
         auto msg_size = (static_cast<uint16_t>(msg_vec[2] & 0x7F) << 8) | msg_vec[3];
         return (msg_size == long_vec.size());
     }
+    // If message vector is smaller than 128 bytes, length field will be 1 byte. Additional check to make sure msg_vec[2] exists.
     else if (msg_vec.size() < 128 && msg_vec.size() >= 3)
     {
         auto tmp_start_index = start_index + short_frame_;
