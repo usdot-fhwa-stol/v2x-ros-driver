@@ -96,7 +96,7 @@ bool MqttRadioClient::connect(const std::string &remote_address,
 
     // Configure automatic reconnection
     mosquitto_reconnect_delay_set(mosq_,
-                                  static_cast<unsigned int>(reconnect_interval_sec_)
+                                  static_cast<unsigned int>(reconnect_interval_sec_),
                                   static_cast<unsigned int>(reconnect_interval_sec_ * 10),
                                   true);
 
