@@ -52,6 +52,8 @@ jobs:
       run: |
         source "$INIT_ENV"
         ./src/${{ github.event.repository.name }}/docker/checkout.bash -r /opt/carma/ -b ${{ steps.determine-base-branch.outputs.git_branch }}
+    - name: Install mosquitto
+      run: apt-get update && apt-get install -y libmosquitto-dev
     - name: Build
       run: |
         source "$INIT_ENV"

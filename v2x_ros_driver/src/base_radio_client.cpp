@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2025 LEIDOS.
+ * Copyright (C) 2022-2026 LEIDOS.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -62,7 +62,7 @@ void BaseRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> 
         auto start_index = i;
         std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.end());
 
-        if (msg_vec.size() > 16383) {
+        if (msg_vec.size() > 16383) { // lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length marker
             RCLCPP_WARN_STREAM(logger_, "BaseRadioClient::process() : discarding received message with length field longer than 16383.");
             break;
         }
