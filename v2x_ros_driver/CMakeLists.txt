@@ -9,6 +9,13 @@ carma_package()
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
+# ── Find mosquitto library ──
+find_library(MOSQUITTO_LIB mosquitto REQUIRED)
+if(NOT MOSQUITTO_LIB)
+  message(FATAL_ERROR "libmosquitto not found. Install with: apt install libmosquitto-dev")
+endif()
+message(STATUS "Found mosquitto: ${MOSQUITTO_LIB}")
+
 # Name build targets
 set(node_exec v2x_ros_driver_node_exec)
 set(node_lib v2x_ros_driver_node)
@@ -23,8 +30,15 @@ ament_export_include_directories(include)
 
 # Build
 ament_auto_add_library(${node_lib} SHARED
+        src/base_radio_client.cpp
+        src/udp_radio_client.cpp
+        src/mqtt_radio_client.cpp
         src/v2x_ros_driver_node.cpp
-        src/v2x_radio_client.cpp
+)
+
+# Link mosquitto to the shared library
+target_link_libraries(${node_lib}
+        ${MOSQUITTO_LIB}
 )
 
 ament_auto_add_executable(${node_exec}

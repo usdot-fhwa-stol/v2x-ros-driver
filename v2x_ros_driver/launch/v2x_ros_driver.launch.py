@@ -53,6 +53,11 @@ def generate_launch_description():
         name ='enable_v2x_driver_lifecycle', default_value='False',
         description="Enable the v2x_ros_driver_node lifecycle. If enabled manually transitions the node to active state. Default is false")
 
+    # ── New: protocol selection argument ──
+    declare_protocol_arg = DeclareLaunchArgument(
+        name='protocol', default_value='udp',
+        description='Communication protocol: "udp" for Cohda/Commsignia/Kapsch, "mqtt" for Ettifos OBU')
+
     # Get parameter file path
     param_file_path = os.path.join(
         get_package_share_directory('v2x_ros_driver'), 'config/params.yaml')
@@ -89,7 +94,14 @@ def generate_launch_description():
                     ],
                     parameters=[
                       param_file_path,
-                      global_params_override_file
+                      global_params_override_file,
+                      # Protocol can be overridden from the command line.
+                      # All other MQTT params (broker_address, broker_port, etc.)
+                      # should be set in params.yaml or GlobalParamsOverride.yaml
+                      # to avoid LaunchConfiguration string→int type mismatches.
+                      {
+                          'protocol': LaunchConfiguration('protocol'),
+                      }
                     ]
             ),
         ],
@@ -135,6 +147,8 @@ def generate_launch_description():
         declare_configuration_delay_arg,
         declare_global_params_override_file_arg,
         declare_enable_v2x_driver_lifecycle,
+        declare_protocol_arg,
+        # Node + lifecycle
         container,
         activate_node_group_action
     ])

@@ -1,4 +1,3 @@
-
 /*------------------------------------------------------------------------------
 * Copyright (C) 2020-2025 LEIDOS.
 *
@@ -18,7 +17,7 @@
 
 #include <iostream>
 #include <functional>
-#include "v2x_ros_driver/v2x_radio_client.h"
+#include "v2x_ros_driver/udp_radio_client.h"
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
@@ -28,6 +27,18 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
+#include "v2x_ros_driver/mqtt_radio_client.h"
+#include "v2x_ros_driver/v2x_ros_driver_config.h"
+#include <mosquitto.h>
+#include <thread>
+#include <chrono>
+#include <atomic>
+#include <mutex>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <unistd.h>
+
 TEST(V2XRadioClient, testSocket)
 {
     boost::asio::ip::tcp::endpoint remote_endpoint = boost::asio::ip::tcp::endpoint( boost::asio::ip::address_v4::from_string( "192.168.88.40" ), 5398 );
@@ -36,7 +47,7 @@ TEST(V2XRadioClient, testSocket)
 
 TEST(V2XRadioClient,testConnection)
 {
-    V2XDriverApplication::V2XRadioClient v2x_radio_client_;
+    V2XDriverApplication::UdpRadioClient v2x_radio_client_;
     boost::system::error_code ec;
 
     ASSERT_FALSE(v2x_radio_client_.connected());
@@ -57,7 +68,7 @@ TEST(V2XRadioClient,testConnection)
 
 TEST(V2XRadioClient,testValidateMsgId)
 {
-    V2XDriverApplication::V2XRadioClient v2x_radio_client_;
+    V2XDriverApplication::UdpRadioClient v2x_radio_client_;
     //No valid msg_id loaded yet
     uint16_t msg_id = 20;
     ASSERT_FALSE(v2x_radio_client_.IsValidMsgID(std::to_string(msg_id)));
@@ -91,7 +102,7 @@ TEST(V2XRadioClient,testValidateMsgId)
 }
 TEST(V2XRadioClient,testsendV2xMessage)
 {
-    V2XDriverApplication::V2XRadioClient v2x_radio_client_;
+    V2XDriverApplication::UdpRadioClient v2x_radio_client_;
     std::shared_ptr<std::vector<uint8_t>> messagePtr;
     std::vector<uint8_t> message =
      {0, 243, 124, 29, 89, 212, 226, 212, 58, 179, 169, 197, 168,
@@ -109,7 +120,7 @@ TEST(V2XRadioClient,testsendV2xMessage)
 }
 TEST(V2XRadioClient,testIsValidMsgSize)
 {
-    V2XDriverApplication::V2XRadioClient v2x_radio_client_;
+    V2XDriverApplication::UdpRadioClient v2x_radio_client_;
     size_t start_index = 0;
 
     // Case 1: Message vector too short (msg_vec.size() < 3)
@@ -187,6 +198,367 @@ TEST(V2XRadioClient,testIsValidMsgSize)
             79, 98, 32};
         ASSERT_FALSE(v2x_radio_client_.isValidMsgSize(msg_vec, start_index, invalid_entry));
     }
+}
+
+// MqttRadioClient tests
+
+TEST(MqttRadioClient, testInitialState)
+{
+    V2XDriverApplication::MqttRadioClient client;
+    ASSERT_FALSE(client.connected());
+}
+
+TEST(MqttRadioClient, testSetConfig)
+{
+    V2XDriverApplication::MqttRadioClient client;
+    EXPECT_NO_THROW(client.setMqttConfig("test-client-id", 1, 10, "Ettifos/V2X"));
+    EXPECT_NO_THROW(client.setMqttConfig("", 0, 5, "CustomOEM/V2X"));
+}
+
+TEST(MqttRadioClient, testCloseWithoutConnect)
+{
+    V2XDriverApplication::MqttRadioClient client;
+    EXPECT_NO_THROW(client.close());
+    EXPECT_NO_THROW(client.close()); // double close
+    ASSERT_FALSE(client.connected());
+}
+
+TEST(MqttRadioClient, testSendWithoutConnect)
+{
+    // Mirrors the first part of V2XRadioClient::testsendV2xMessage — send before connect
+    V2XDriverApplication::MqttRadioClient client;
+    std::vector<uint8_t> message =
+     {0, 243, 124, 29, 89, 212, 226, 212, 58, 179, 169, 197, 168,
+     193, 131, 6, 12, 24, 48, 96, 193, 131, 6, 12, 24, 48, 96, 181, 131, 6, 12, 22, 176, 96, 193, 130, 214, 12,
+     24, 48, 90, 193, 131, 6, 12, 24, 48, 96, 193, 131, 6, 12, 24, 48, 96, 193, 131, 6, 12, 24, 48, 96, 193, 131,
+     6, 12, 24, 48, 54, 167, 46, 184, 245, 201, 221, 207, 134, 92, 125, 52, 239, 220, 24, 118, 211, 186, 254, 238,
+     187, 113, 101, 228, 233, 140, 106, 178, 163, 200, 137, 89, 204, 57, 144, 168, 56, 112, 205, 154, 204, 120, 121,
+     114, 211, 151, 149, 253, 216, 118, 229, 117, 26, 108, 58, 112, 106, 101, 198};
+    auto messagePtr = std::make_shared<std::vector<uint8_t>>(std::move(message));
+    ASSERT_FALSE(client.sendV2xMessage(messagePtr));
+}
+
+TEST(MqttRadioClient, testSendNullMessage)
+{
+    V2XDriverApplication::MqttRadioClient client;
+    std::shared_ptr<std::vector<uint8_t>> msg = nullptr;
+    ASSERT_FALSE(client.sendV2xMessage(msg));
+}
+
+TEST(MqttRadioClient, testSendEmptyMessage)
+{
+    V2XDriverApplication::MqttRadioClient client;
+    auto empty = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
+    ASSERT_FALSE(client.sendV2xMessage(empty));
+}
+
+TEST(MqttRadioClient, testSendSingleByteMessage)
+{
+    V2XDriverApplication::MqttRadioClient client;
+    auto msg = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{0x14});
+    ASSERT_FALSE(client.sendV2xMessage(msg));
+}
+
+TEST(MqttRadioClient, testConnectWithoutBroker)
+{
+    V2XDriverApplication::MqttRadioClient client;
+    client.setMqttConfig("", 0, 5, "Ettifos/V2X");
+
+    boost::system::error_code ec;
+    client.connect("127.0.0.1", 19999, 0, ec);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    ASSERT_FALSE(client.connected());
+    client.close();
+}
+
+TEST(MqttRadioClient, testMultipleInstances)
+{
+    {
+        V2XDriverApplication::MqttRadioClient c1;
+        V2XDriverApplication::MqttRadioClient c2;
+        V2XDriverApplication::MqttRadioClient c3;
+        ASSERT_FALSE(c1.connected());
+        ASSERT_FALSE(c2.connected());
+        ASSERT_FALSE(c3.connected());
+    }
+    V2XDriverApplication::MqttRadioClient c4;
+    ASSERT_FALSE(c4.connected());
+}
+
+TEST(MqttRadioClient, testPolymorphism)
+{
+    std::unique_ptr<V2XDriverApplication::BaseRadioClient> client =
+        std::make_unique<V2XDriverApplication::MqttRadioClient>();
+    ASSERT_FALSE(client->connected());
+    ASSERT_NE(dynamic_cast<V2XDriverApplication::MqttRadioClient*>(client.get()), nullptr);
+}
+
+TEST(MqttRadioClient, testValidateMsgId)
+{
+    V2XDriverApplication::MqttRadioClient client;
+
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory("v2x_ros_driver");
+    client.set_wave_file_path(package_share_directory + "/etc/wave.json");
+
+    ASSERT_TRUE(client.IsValidMsgID("20"));   // BSM
+    ASSERT_TRUE(client.IsValidMsgID("18"));   // MAP
+    ASSERT_TRUE(client.IsValidMsgID("19"));   // SPaT
+    ASSERT_TRUE(client.IsValidMsgID("31"));   // TIM
+    ASSERT_TRUE(client.IsValidMsgID("243"));  // MobilityOperation
+    ASSERT_FALSE(client.IsValidMsgID("896")); // invalid
+}
+
+TEST(MqttRadioClient, testPsidLookup)
+{
+    V2XDriverApplication::MqttRadioClient client;
+
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory("v2x_ros_driver");
+    client.loadWaveConfigIds(package_share_directory + "/etc/wave.json");
+
+    ASSERT_EQ(client.psidForDsrcMsgId("20"), "0020");   // BSM
+    ASSERT_EQ(client.psidForDsrcMsgId("243"), "BFEE");  // MobilityOperation
+    ASSERT_EQ(client.psidForDsrcMsgId("245"), "8003");  // TrafficControlMessage
+    ASSERT_EQ(client.psidForDsrcMsgId("999"), "");       // unknown
+}
+
+// Config tests 
+
+TEST(V2XRosDriverConfig, testDefaultProtocol)
+{
+    V2XDriverApplication::Config cfg;
+    ASSERT_EQ(cfg.protocol, "udp");
+    ASSERT_EQ(cfg.broker_address, "localhost");
+    ASSERT_EQ(cfg.broker_port, 1883);
+    ASSERT_EQ(cfg.client_id, "");
+    ASSERT_EQ(cfg.qos_default, 0);
+    ASSERT_EQ(cfg.reconnect_interval_sec, 5);
+    ASSERT_EQ(cfg.mqtt_topic_prefix, "Ettifos/V2X");
+}
+
+TEST(V2XRosDriverConfig, testStreamOutput)
+{
+    V2XDriverApplication::Config cfg;
+    cfg.protocol = "mqtt";
+    cfg.broker_address = "192.168.88.50";
+    cfg.broker_port = 8883;
+
+    std::ostringstream oss;
+    oss << cfg;
+    std::string output = oss.str();
+
+    ASSERT_NE(output.find("protocol: mqtt"), std::string::npos);
+    ASSERT_NE(output.find("broker_address: 192.168.88.50"), std::string::npos);
+    ASSERT_NE(output.find("broker_port: 8883"), std::string::npos);
+}
+
+// Protocol switching test
+
+TEST(ProtocolFactory, testCreateRadioClient)
+{
+    auto createClient = [](const std::string &protocol) -> std::unique_ptr<V2XDriverApplication::BaseRadioClient>
+    {
+        if (protocol == "mqtt")
+        {
+            auto mqtt = std::make_unique<V2XDriverApplication::MqttRadioClient>();
+            mqtt->setMqttConfig("", 0, 5, "Ettifos/V2X");
+            return mqtt;
+        }
+        else
+        {
+            return std::make_unique<V2XDriverApplication::UdpRadioClient>();
+        }
+    };
+
+    auto udp_client = createClient("udp");
+    ASSERT_NE(dynamic_cast<V2XDriverApplication::UdpRadioClient*>(udp_client.get()), nullptr);
+    ASSERT_EQ(dynamic_cast<V2XDriverApplication::MqttRadioClient*>(udp_client.get()), nullptr);
+
+    auto mqtt_client = createClient("mqtt");
+    ASSERT_EQ(dynamic_cast<V2XDriverApplication::UdpRadioClient*>(mqtt_client.get()), nullptr);
+    ASSERT_NE(dynamic_cast<V2XDriverApplication::MqttRadioClient*>(mqtt_client.get()), nullptr);
+
+    auto default_client = createClient("unknown");
+    ASSERT_NE(dynamic_cast<V2XDriverApplication::UdpRadioClient*>(default_client.get()), nullptr);
+}
+
+// Test connecting/sending 
+
+class MqttIntegrationTest : public ::testing::Test
+{
+protected:
+    static bool broker_available_;
+    static pid_t broker_pid_;
+
+    static void SetUpTestSuite()
+    {
+        broker_pid_ = fork();
+        if (broker_pid_ == 0)
+        {
+            execlp("mosquitto", "mosquitto", "-p", "11883", nullptr);
+            _exit(1);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        int status;
+        pid_t result = waitpid(broker_pid_, &status, WNOHANG);
+        broker_available_ = (result == 0);
+    }
+
+    static void TearDownTestSuite()
+    {
+        if (broker_pid_ > 0)
+        {
+            kill(broker_pid_, SIGTERM);
+            waitpid(broker_pid_, nullptr, 0);
+        }
+    }
+};
+
+bool MqttIntegrationTest::broker_available_ = false;
+pid_t MqttIntegrationTest::broker_pid_ = -1;
+
+TEST_F(MqttIntegrationTest, testConnect)
+{
+    if (!broker_available_) GTEST_SKIP() << "mosquitto not available";
+
+    V2XDriverApplication::MqttRadioClient client;
+    client.setMqttConfig("test-connect", 0, 5, "Ettifos/V2X");
+
+    boost::system::error_code ec;
+    bool result = client.connect("127.0.0.1", 11883, 0, ec);
+    ASSERT_TRUE(result);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    ASSERT_TRUE(client.connected());
+
+    client.close();
+    ASSERT_FALSE(client.connected());
+}
+
+TEST_F(MqttIntegrationTest, testsendV2xMessage)
+{
+    if (!broker_available_) GTEST_SKIP() << "mosquitto not available";
+
+    // Same message payload as V2XRadioClient::testsendV2xMessage but over MQTT
+    V2XDriverApplication::MqttRadioClient client;
+    client.setMqttConfig("test-send-v2x", 0, 5, "Ettifos/V2X");
+
+    std::string pkg_dir = ament_index_cpp::get_package_share_directory("v2x_ros_driver");
+    client.loadWaveConfigIds(pkg_dir + "/etc/wave.json");
+
+    std::shared_ptr<std::vector<uint8_t>> messagePtr;
+    std::vector<uint8_t> message =
+     {0, 243, 124, 29, 89, 212, 226, 212, 58, 179, 169, 197, 168,
+     193, 131, 6, 12, 24, 48, 96, 193, 131, 6, 12, 24, 48, 96, 181, 131, 6, 12, 22, 176, 96, 193, 130, 214, 12,
+     24, 48, 90, 193, 131, 6, 12, 24, 48, 96, 193, 131, 6, 12, 24, 48, 96, 193, 131, 6, 12, 24, 48, 96, 193, 131,
+     6, 12, 24, 48, 54, 167, 46, 184, 245, 201, 221, 207, 134, 92, 125, 52, 239, 220, 24, 118, 211, 186, 254, 238,
+     187, 113, 101, 228, 233, 140, 106, 178, 163, 200, 137, 89, 204, 57, 144, 168, 56, 112, 205, 154, 204, 120, 121,
+     114, 211, 151, 149, 253, 216, 118, 229, 117, 26, 108, 58, 112, 106, 101, 198};
+    messagePtr = std::make_shared<std::vector<uint8_t>>(std::move(message));
+
+    // Send before connect should fail
+    ASSERT_FALSE(client.sendV2xMessage(messagePtr));
+
+    // Connect to local broker
+    boost::system::error_code ec;
+    auto result = client.connect("127.0.0.1", 11883, 0, ec);
+    ASSERT_TRUE(result);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    ASSERT_TRUE(client.connected());
+
+    // Send after connect should succeed
+    // Re-create messagePtr since std::move emptied the original
+    std::vector<uint8_t> message2 =
+     {0, 243, 124, 29, 89, 212, 226, 212, 58, 179, 169, 197, 168,
+     193, 131, 6, 12, 24, 48, 96, 193, 131, 6, 12, 24, 48, 96, 181, 131, 6, 12, 22, 176, 96, 193, 130, 214, 12,
+     24, 48, 90, 193, 131, 6, 12, 24, 48, 96, 193, 131, 6, 12, 24, 48, 96, 193, 131, 6, 12, 24, 48, 96, 193, 131,
+     6, 12, 24, 48, 54, 167, 46, 184, 245, 201, 221, 207, 134, 92, 125, 52, 239, 220, 24, 118, 211, 186, 254, 238,
+     187, 113, 101, 228, 233, 140, 106, 178, 163, 200, 137, 89, 204, 57, 144, 168, 56, 112, 205, 154, 204, 120, 121,
+     114, 211, 151, 149, 253, 216, 118, 229, 117, 26, 108, 58, 112, 106, 101, 198};
+    messagePtr = std::make_shared<std::vector<uint8_t>>(std::move(message2));
+    ASSERT_TRUE(client.sendV2xMessage(messagePtr));
+
+    client.close();
+}
+
+TEST_F(MqttIntegrationTest, testSendMultipleMessageTypes)
+{
+    if (!broker_available_) GTEST_SKIP() << "mosquitto not available";
+
+    V2XDriverApplication::MqttRadioClient client;
+    client.setMqttConfig("test-multi-send", 0, 5, "Ettifos/V2X");
+
+    std::string pkg_dir = ament_index_cpp::get_package_share_directory("v2x_ros_driver");
+    client.loadWaveConfigIds(pkg_dir + "/etc/wave.json");
+
+    boost::system::error_code ec;
+    client.connect("127.0.0.1", 11883, 0, ec);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    ASSERT_TRUE(client.connected());
+
+    // BSM (DSRCmsgID 20)
+    auto bsm = std::make_shared<std::vector<uint8_t>>(
+        std::vector<uint8_t>{0x00, 0x14, 0x03, 0xAA, 0xBB, 0xCC});
+    ASSERT_TRUE(client.sendV2xMessage(bsm));
+
+    // MAP (DSRCmsgID 18)
+    auto map_msg = std::make_shared<std::vector<uint8_t>>(
+        std::vector<uint8_t>{0x00, 0x12, 0x03, 0xDD, 0xEE, 0xFF});
+    ASSERT_TRUE(client.sendV2xMessage(map_msg));
+
+    // MobilityOperation (DSRCmsgID 243)
+    auto mob_op = std::make_shared<std::vector<uint8_t>>(
+        std::vector<uint8_t>{0x00, 0xF3, 0x03, 0x77, 0x88, 0x99});
+    ASSERT_TRUE(client.sendV2xMessage(mob_op));
+
+    // TrafficControlMessage (DSRCmsgID 245)
+    auto tcm = std::make_shared<std::vector<uint8_t>>(
+        std::vector<uint8_t>{0x00, 0xF5, 0x03, 0x44, 0x55, 0x66});
+    ASSERT_TRUE(client.sendV2xMessage(tcm));
+
+    client.close();
+}
+
+TEST_F(MqttIntegrationTest, testInboundMessage)
+{
+    if (!broker_available_) GTEST_SKIP() << "mosquitto not available";
+
+    V2XDriverApplication::MqttRadioClient client;
+    client.setMqttConfig("test-inbound", 0, 5, "Ettifos/V2X");
+
+    std::string pkg_dir = ament_index_cpp::get_package_share_directory("v2x_ros_driver");
+    client.set_wave_file_path(pkg_dir + "/etc/wave.json");
+
+    std::vector<std::pair<std::vector<uint8_t>, uint16_t>> received;
+    std::mutex mtx;
+    client.onMessageReceived.connect(
+        [&received, &mtx](const std::vector<uint8_t> &msg, uint16_t id) {
+            std::lock_guard<std::mutex> lock(mtx);
+            received.push_back({msg, id});
+        });
+
+    boost::system::error_code ec;
+    client.connect("127.0.0.1", 11883, 0, ec);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    ASSERT_TRUE(client.connected());
+
+    struct mosquitto *pub = mosquitto_new("test-publisher", true, nullptr);
+    ASSERT_NE(pub, nullptr);
+    ASSERT_EQ(mosquitto_connect(pub, "127.0.0.1", 11883, 60), MOSQ_ERR_SUCCESS);
+
+    std::vector<uint8_t> bsm = {0x00, 0x14, 0x03, 0xAA, 0xBB, 0xCC};
+    mosquitto_publish(pub, nullptr, "Ettifos/V2X/ind/J2735/20",
+                      static_cast<int>(bsm.size()), bsm.data(), 0, false);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    mosquitto_disconnect(pub);
+    mosquitto_destroy(pub);
+
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        ASSERT_EQ(received.size(), 1u);
+        ASSERT_EQ(received[0].second, 20u);
+    }
+
+    client.close();
 }
 
 int main(int argc, char ** argv)
