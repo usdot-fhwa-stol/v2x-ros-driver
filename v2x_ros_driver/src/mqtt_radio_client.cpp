@@ -275,18 +275,20 @@ void MqttRadioClient::subscribeToTopics()
     }
 }
 
-std::string MqttRadioClient::buildPublishTopic(const std::string &psid_hex) const
-{
-    // Strip leading zeros from PSID hex for topic
-    std::string stripped = psid_hex;
-    size_t start = stripped.find_first_not_of('0');
-    if (start != std::string::npos)
-        stripped = stripped.substr(start);
-    else
-        stripped = "0";
+// Override map — only for PSID where Ettifos differs from current wave.json mapping (SDSM)
+static const std::unordered_map<std::string, int> kEttifosPsidOverrides = {
+    {"8010", 144},  // SDSM: Ettifos=0x90
+};
 
-    // Ettifos/V2X/req/J2735/{PSID}
-    return mqtt_topic_prefix_ + "/req/J2735/" + stripped;
+std::string MqttRadioClient::buildPublishTopic(const std::string &psid_hex) const {
+    int decimal_psid;
+    auto it = kEttifosPsidOverrides.find(psid_hex);
+    if (it != kEttifosPsidOverrides.end()) {
+        decimal_psid = it->second;
+    } else {
+        decimal_psid = std::stoi(psid_hex, nullptr, 16);
+    }
+    return mqtt_topic_prefix_ + "/req/J2735/" + std::to_string(decimal_psid);
 }
 
 std::string MqttRadioClient::buildSubscribeTopic() const
