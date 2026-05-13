@@ -2,7 +2,7 @@
 
 ## Deployment Instructions
 
-The v2x-ros-driver is a ros2 package currently implemented in [ros2-humble](https://docs.ros.org/en/humble/Installation.html). It creates a UDP client to listen to input from the v2x radio and broadcast the UPER encoded message to ROS.
+The v2x-ros-driver is a ros2 package currently implemented in [ros2-humble](https://docs.ros.org/en/humble/Installation.html), but previous releases support [ros2-foxy](https://docs.ros.org/en/foxy/Installation.html). It creates a UDP client to listen to input from the v2x radio and broadcast the UPER encoded message to ROS.
 In order to deploy the driver in a ros2-humble configured environment, the following steps can be used
 
 ### Deploy using docker (recommended)
