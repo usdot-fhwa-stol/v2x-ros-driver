@@ -19,6 +19,9 @@ The [v2x-ros-emulator repository](https://github.com/usdot-fhwa-stol/v2x-emulato
 The driver was initially developed for CARMA Platform. The primary CARMA Platform repository can be found on [github](https://github.com/usdot-fhwa-stol/carma-platform) and is part of the [USDOT FHWA STOL](https://github.com/usdot-fhwa-stol/)
 github organization. Documentation on how the CARMA Platform functions, how it will evolve over time, and how you can contribute can be found at the above links as well
 
+## carma-msgs
+The [carma-msgs repository](https://github.com/usdot-fhwa-stol/carma-msgs) contains various message types used by CARMA Platform, including those necessary for v2x-ros-driver (Ex: carma_driver_msgs/msg/ByteArray).
+
 # CDA 1Tenth
 [CDA 1Tenth](https://github.com/usdot-fhwa-stol/cda1tenth-bringup/tree/develop) is a low cost research platform for developing and testing cooperative driving automation (CDA) on small scale or simulated vehicles and infrastructure.
 
