@@ -1,4 +1,4 @@
-# Cohda MK6 OBU Setup for V2X-ROS-Driver
+# Cohda MK6 OBU Setup for v2x-ros-driver
 
 The Cohda MK6 OBU can be configured using the [mk6-rsu-obu-setup.sh](mk6-rsu-obu-setup.sh) script.
 We have observed occasional clearing of the configuration, so a separate script will be run to ensure the configurations exist.
@@ -10,7 +10,7 @@ Additionally, SecurityEnable is defaulted to 0 (disabled). To enable security (s
 ## Setup
 
 1. Download the three scripts in this [docs](/docs/) directory.
-2. Connect the OBU to the same local network as a PC running the V2X-ROS-Driver.
+2. Connect the OBU to the same local network as a PC running the v2x-ros-driver.
 3. Using the PC, open a terminal and navigate to the folder where the files were saved. Example:
 
 ```sh
@@ -61,4 +61,4 @@ chmod +x /mnt/rw/rc.local
 reboot
 ```
 
-OBU is setup to forward to the PC running V2X-ROS-Driver. Additionally, the rc.local script will automatically run the configuration check script at every boot of the device.
+OBU is setup to forward to the PC running v2x-ros-driver. Additionally, the rc.local script will automatically run the configuration check script at every boot of the device.
