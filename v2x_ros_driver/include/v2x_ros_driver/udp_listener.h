@@ -109,7 +109,7 @@ public:
 
 
     /**
-     * @brief Starts the
+     * @brief Starts the listener
      * @return
      */
     bool start()
@@ -119,6 +119,10 @@ public:
         return true;
     }
 
+    /**
+     * @brief Stops the listener
+     * @return
+     */
     void stop()
     {
         if(!running_.exchange(false)) return;

@@ -16,7 +16,7 @@ from ament_index_python import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
-from launch.actions import DeclareLaunchArgument, Shutdown, ExecuteProcess, GroupAction, TimerAction, RegisterEventHandler
+from launch.actions import DeclareLaunchArgument, Shutdown, ExecuteProcess, GroupAction, TimerAction, RegisterEventHandler, LogInfo
 from launch.substitutions import LaunchConfiguration, FindExecutable
 from launch.event_handlers import OnExecutionComplete
 from launch.conditions import IfCondition
@@ -65,7 +65,7 @@ def generate_launch_description():
         default_value = ["/opt/carma/vehicle/config/GlobalParamsOverride.yaml"],
         description = "Path to global file containing the parameters overwrite"
     )
-
+    
     # Launch node(s) in a carma container to allow logging to be configured
     container = ComposableNodeContainer(
         package='carma_ros2_utils',

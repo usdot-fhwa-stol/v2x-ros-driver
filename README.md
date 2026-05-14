@@ -10,7 +10,7 @@ For more information regarding the recommended setup/configuration for an OBU, p
 
 # Related Repositories
 ## v2x-ros-conversion
-The [v2x-ros-conversion repository](https://github.com/usdot-fhwa-stol/v2x-ros-conversion) contains a Message node that decodes the carma_driver_msgs/msg/ByteArray passed by v2x-ros-driver into a binary blob and forwards it to the C-V2X driver, such that any OBU/RSU can broadcast the message directly. It also contains a J2735 Converter node that converts the data in the carma_driver_msgs/msg/ByteArray msgs based on J2735 standard units to another message using more usable SI units and vice-versa.
+The [v2x-ros-conversion repository](https://github.com/usdot-fhwa-stol/v2x-ros-conversion) contains a Message node that decodes the carma_driver_msgs/msg/ByteArray passed by v2x-ros-driver into a binary blob. Thats sent to the J2735 Converter node that converts the data in the carma msgs based on J2735 standard units to another message using more usable SI units and vice-versa. Those are forwarded C-V2X driver, such that any OBU/RSU can broadcast the message directly.
 
 ## v2x-ros-emulator
 The [v2x-ros-emulator repository](https://github.com/usdot-fhwa-stol/v2x-emulator) enables Raspberry Pi’s to act as mock OBUs and RSUs for the CDA1tenth platform.
