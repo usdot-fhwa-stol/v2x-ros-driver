@@ -285,7 +285,7 @@ static const std::unordered_map<std::string, int> kEttifosPsidOverrides = {
     {"8010", 144},  //SDSM
     {"0027", 39},  //PSM
     /* Test Messages */
-    {"BFEE", 49134},  //Mobility Messages
+    {"BFEE", 16494},  //Mobility Messages
     //TODO for future: SRM ID: 2113686
 };
 
