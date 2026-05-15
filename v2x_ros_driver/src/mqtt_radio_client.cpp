@@ -275,9 +275,18 @@ void MqttRadioClient::subscribeToTopics()
     }
 }
 
-// Override map — only for PSID where Ettifos differs from current wave.json mapping (SDSM)
+// Override map — only for PSID where Ettifos differs from current wave.json mapping
 static const std::unordered_map<std::string, int> kEttifosPsidOverrides = {
-    {"8010", 144},  // SDSM: Ettifos=0x90
+
+    {"0020", 32},  // BSM
+    {"0083", 131},  // TIM
+    {"0082", 2113687},  // MAP
+    {"0082", 130},  //SPAT
+    {"8010", 144},  //SDSM
+    {"0027", 39},  //PSM
+    /* Test Messages */
+    {"BFEE", 16494},  //Mobility Messages
+    //TODO for future: SRM ID: 2113686
 };
 
 std::string MqttRadioClient::buildPublishTopic(const std::string &psid_hex) const {
