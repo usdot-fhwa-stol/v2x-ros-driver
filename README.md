@@ -8,6 +8,8 @@ v2x-ros-driver is the driver for use with V2X radios and had been tested with th
 
 For more information regarding the recommended setup/configuration for an OBU, please refer to this [documentation](/docs/).
 
+![Diagram](./assets/diagram.png)
+
 # Related Repositories
 ## v2x-ros-conversion
 The [v2x-ros-conversion repository](https://github.com/usdot-fhwa-stol/v2x-ros-conversion) contains a Message node that decodes the carma_driver_msgs/msg/ByteArray passed by v2x-ros-driver into a binary blob. Thats sent to the J2735 Converter node that converts the data in the carma msgs based on J2735 standard units to another message using more usable SI units and vice-versa. Those are forwarded C-V2X driver, such that any OBU/RSU can broadcast the message directly.

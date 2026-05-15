@@ -1,68 +1,45 @@
 <?xml version="1.0"?>
-<!--
-  Copyright (C) 2022-2025 LEIDOS.
-
-  Licensed under the Apache License, Version 2.0 (the "License"); you may not
-  use this file except in compliance with the License. You may obtain a copy of
-  the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-  License for the specific language governing permissions and limitations under
-  the License.
--->
 <launch>
 
-    <!-- Declare Launch Arguments -->
-    <arg name="log_level" default="WARN" 
-         description="The log level to use for the v2x_ros_driver_node"/>
-         
-    <arg name="configuration_delay" default="2.0" 
-         description="The delay in seconds before the v2x_ros_driver_node is configured"/>
-         
-    <arg name="enable_v2x_driver_lifecycle" default="False" 
-         description="Enable the v2x_ros_driver_node lifecycle. If enabled manually transitions the node to active state. Default is false"/>
-         
-    <arg name="protocol" default="udp" 
-         description="Communication protocol: 'udp' for Cohda/Commsignia/Kapsch, 'mqtt' for Ettifos OBU"/>
-         
-    <arg name="global_params_override_file" default="/opt/carma/vehicle/config/GlobalParamsOverride.yaml" 
-         description="Path to global file containing the parameters overwrite"/>
+     <arg name="log_level" default="WARN"
+          description="The log level to use for the v2x_ros_driver_node" />
 
-    <!-- Launch node(s) in a carma container to allow logging to be configured -->
-    <node_container pkg="carma_ros2_utils" exec="carma_component_container_mt" name="v2x_ros_driver_container" on_exit="shutdown">
-        
-        <!-- Launch the core node(s) -->
-        <composable_node pkg="v2x_ros_driver" plugin="V2XDriverApplication::Node" name="v2x_ros_driver_node">
-            
-            <!-- Extra Arguments -->
-            <extra_arg name="use_intra_process_comms" value="True"/>
-            <extra_arg name="--log-level" value="$(var log_level)"/>
+     <arg name="configuration_delay" default="2.0"
+          description="The delay in seconds before the v2x_ros_driver_node is configured" />
 
-            <!-- Remappings -->
-            <remap from="inbound_binary_msg" to="comms/inbound_binary_msg"/>
-            <remap from="outbound_binary_msg" to="comms/outbound_binary_msg"/>
+     <arg name="enable_v2x_driver_lifecycle" default="False"
+          description="Enable the v2x_ros_driver_node lifecycle. If enabled manually transitions the node to active state. Default is false" />
 
-            <!-- Parameters -->
-            <param from="$(find-pkg-share v2x_ros_driver)/config/params.yaml"/>
-            <param from="$(var global_params_override_file)"/>
-            
-            <!-- Protocol can be overridden from the command line. -->
-            <param name="protocol" value="$(var protocol)"/>
-        </composable_node>
-        
-    </node_container>
+     <arg name="protocol" default="udp"
+          description="Communication protocol: 'udp' for Cohda/Commsignia/Kapsch, 'mqtt' for Ettifos OBU" />
 
-    <!-- Node lifecycle activation called only if enable_v2x_driver_lifecycle is set to true -->
-    <group if="$(var enable_v2x_driver_lifecycle)">
-        <!-- 
-          Using a shell execution chain to handle the sequenced event:
-          Wait for configuration_delay, then configure, then activate.
-        -->
-        <executable cmd="sh -c 'sleep $(var configuration_delay) &amp;&amp; ros2 lifecycle set /v2x_ros_driver_node configure &amp;&amp; ros2 lifecycle set /v2x_ros_driver_node activate'" output="screen" />
-    </group>
+     <arg name="global_params_override_file"
+          default="/opt/carma/vehicle/config/GlobalParamsOverride.yaml"
+          description="Path to global file containing the parameters overwrite" />
+
+     <node_container pkg="carma_ros2_utils" exec="carma_component_container_mt"
+          name="v2x_ros_driver_container" namespace="/" on_exit="shutdown">
+
+          <composable_node pkg="v2x_ros_driver" plugin="V2XDriverApplication::Node"
+               name="v2x_ros_driver_node">
+
+               <extra_arg name="use_intra_process_comms" value="True" />
+               <extra_arg name="--log-level" value="$(var log_level)" />
+
+               <remap from="inbound_binary_msg" to="comms/inbound_binary_msg" />
+               <remap from="outbound_binary_msg" to="comms/outbound_binary_msg" />
+
+               <param from="$(find-pkg-share v2x_ros_driver)/config/params.yaml" />
+               <param from="$(var global_params_override_file)" />
+
+               <param name="protocol" value="$(var protocol)" />
+          </composable_node>
+     </node_container>
+
+     <group if="$(var enable_v2x_driver_lifecycle)">
+          <executable
+               cmd="sh -c sleep\ $(var configuration_delay)\ &amp;&amp;\ ros2\ lifecycle\ set\ /v2x_ros_driver_node\ configure\ &amp;&amp;\ ros2\ lifecycle\ set\ /v2x_ros_driver_node\ activate"
+               output="screen" />
+     </group>
 
 </launch>
