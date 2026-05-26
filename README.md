@@ -16,7 +16,7 @@ The [v2x-ros-conversion repository](https://github.com/usdot-fhwa-stol/v2x-ros-c
 The [v2x-ros-emulator repository](https://github.com/usdot-fhwa-stol/v2x-emulator) enables Raspberry Pi’s to act as mock OBUs and RSUs for the CDA1tenth platform.
 
 # CARMA Platform
-CARMA Platform provides the navigation and guidance functions for its connected and autonomous host vehicle (SAE level 3+), as well as speed and steering control functions. This driver was initially developed for CARMA Platform. The primary CARMA Platform repository can be found on [github](https://github.com/usdot-fhwa-stol/carma-platform) and is part of the [USDOT FHWA STOL](https://github.com/usdot-fhwa-stol/)
+CARMA Platform provides the navigation and guidance functions for its connected and autonomous host vehicle (SAE level 2+), as well as speed and steering control functions. This driver was initially developed for CARMA Platform. The primary CARMA Platform repository can be found on [github](https://github.com/usdot-fhwa-stol/carma-platform) and is part of the [USDOT FHWA STOL](https://github.com/usdot-fhwa-stol/)
 github organization. Documentation on how the CARMA Platform functions, how it will evolve over time, and how you can contribute can be found at the above links as well
 
 ## carma-msgs
