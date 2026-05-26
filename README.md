@@ -3,14 +3,27 @@
 [![CI](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml/badge.svg)](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml) | [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=usdot-fhwa-stol_v2x-ros-driver&metric=alert_status)](https://sonarcloud.io/dashboard?id=usdot-fhwa-stol_v2x-ros-driver) | [![Build Workflows](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml) |  [![Build Workflows](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/dockerhub.yml/badge.svg?branch=develop)](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/dockerhub.yml)
 
 
-# V2X-ROS-Driver
-V2X-ROS-Driver is the driver for use with V2X radios and had been tested with the following OBUs: Cohda (MK5/MK6C/MK6), Commsignia, Kapsch. It implements the communication interface allowing UPER-encoded SAE J2735 communication to be exposed to a ROS network using [carma_driver_msgs/msg/ByteArray](https://github.com/usdot-fhwa-stol/carma-msgs/blob/develop/carma_driver_msgs/msg/ByteArray.msg). It has been tested with SAE J2735 2016 but can support later versions as well.
+# v2x-ros-driver
+v2x-ros-driver is the driver for use with V2X radios and had been tested with the following OBUs: Cohda (MK5/MK6C/MK6), Commsignia, Kapsch. It implements the communication interface allowing UPER-encoded SAE J2735 communication to be exposed to a ROS network using [carma_driver_msgs/msg/ByteArray](https://github.com/usdot-fhwa-stol/carma-msgs/blob/develop/carma_driver_msgs/msg/ByteArray.msg). It has been tested with SAE J2735 2016 but can support later versions as well.
 
 For more information regarding the recommended setup/configuration for an OBU, please refer to this [documentation](/docs/).
 
+# Related Repositories
+## v2x-ros-conversion
+The [v2x-ros-conversion repository](https://github.com/usdot-fhwa-stol/v2x-ros-conversion) contains a Message node that decodes the carma_driver_msgs/msg/ByteArray passed by v2x-ros-driver into a binary blob. Thats sent to the J2735 Converter node that converts the data in the carma msgs based on J2735 standard units to another message using more usable SI units and vice-versa. Those are forwarded C-V2X driver, such that any OBU/RSU can broadcast the message directly.
+
+## v2x-ros-emulator
+The [v2x-ros-emulator repository](https://github.com/usdot-fhwa-stol/v2x-emulator) enables Raspberry Pi’s to act as mock OBUs and RSUs for the CDA1tenth platform.
+
 # CARMA Platform
-The driver was initially developed for CARMA Platform. The primary CARMA Platform repository can be found [here](https://github.com/usdot-fhwa-stol/carma-platform) and is part of the [USDOT FHWA STOL](https://github.com/usdot-fhwa-stol/)
+CARMA Platform provides the navigation and guidance functions for its connected and autonomous host vehicle (SAE level 2+), as well as speed and steering control functions. This driver was initially developed for CARMA Platform. The primary CARMA Platform repository can be found on [github](https://github.com/usdot-fhwa-stol/carma-platform) and is part of the [USDOT FHWA STOL](https://github.com/usdot-fhwa-stol/)
 github organization. Documentation on how the CARMA Platform functions, how it will evolve over time, and how you can contribute can be found at the above links as well
+
+## carma-msgs
+The [carma-msgs repository](https://github.com/usdot-fhwa-stol/carma-msgs) contains various message types used by CARMA Platform, including those necessary for v2x-ros-driver (Ex: carma_driver_msgs/msg/ByteArray).
+
+# CDA 1Tenth
+[CDA 1Tenth](https://github.com/usdot-fhwa-stol/cda1tenth-bringup/tree/develop) is a low cost research platform for developing and testing cooperative driving automation (CDA) on small scale or simulated vehicles and infrastructure.
 
 ## Contribution
 Welcome to the CARMA contributing guide. Please read this guide to learn about our development process, how to propose pull requests and improvements, and how to build and test your changes to this project. [CARMA Contributing Guide](https://github.com/usdot-fhwa-stol/carma-platform/blob/develop/Contributing.md)

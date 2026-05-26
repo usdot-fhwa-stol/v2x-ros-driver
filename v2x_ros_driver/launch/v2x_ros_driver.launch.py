@@ -12,20 +12,15 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-import launch.actions
-import launch.events
-import launch_ros.events.lifecycle
-import lifecycle_msgs.msg
 from ament_index_python import get_package_share_directory
-from launch import LaunchDescription, LaunchContext
+from launch import LaunchDescription
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
-from launch.actions import DeclareLaunchArgument, Shutdown, ExecuteProcess, OpaqueFunction
-from launch.substitutions import LaunchConfiguration
-from carma_ros2_utils.launch.get_current_namespace import GetCurrentNamespace
+from launch.actions import DeclareLaunchArgument, Shutdown, ExecuteProcess, GroupAction, TimerAction, RegisterEventHandler, LogInfo
+from launch.substitutions import LaunchConfiguration, FindExecutable
+from launch.event_handlers import OnExecutionComplete
 from launch.conditions import IfCondition
-from launch.substitutions import PythonExpression
-from launch.actions import GroupAction
+from carma_ros2_utils.launch.get_current_namespace import GetCurrentNamespace
 
 import os
 
@@ -70,7 +65,7 @@ def generate_launch_description():
         default_value = ["/opt/carma/vehicle/config/GlobalParamsOverride.yaml"],
         description = "Path to global file containing the parameters overwrite"
     )
-
+    
     # Launch node(s) in a carma container to allow logging to be configured
     container = ComposableNodeContainer(
         package='carma_ros2_utils',
@@ -107,8 +102,8 @@ def generate_launch_description():
         ],
         on_exit= Shutdown()
     )
-    ros2_cmd = launch.substitutions.FindExecutable(name="ros2")
-    process_configure_v2x_ros_driver_node = launch.actions.ExecuteProcess(
+    ros2_cmd = FindExecutable(name="ros2")
+    process_configure_v2x_ros_driver_node = ExecuteProcess(
         cmd=[
             ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "configure",
         ],
@@ -120,17 +115,17 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('enable_v2x_driver_lifecycle')),
         actions=[
             # Set node lifecycle to configure after a delay
-            launch.actions.TimerAction(
+            TimerAction(
                 period=LaunchConfiguration('configuration_delay'),
                 actions=[process_configure_v2x_ros_driver_node],
             ),
 
             # Activate node after configuration
-            launch.actions.RegisterEventHandler(
-                launch.event_handlers.OnExecutionComplete(
+            RegisterEventHandler(
+                OnExecutionComplete(
                     target_action=process_configure_v2x_ros_driver_node,
                     on_completion=[
-                        launch.actions.ExecuteProcess(
+                        ExecuteProcess(
                             cmd=[
                                 ros2_cmd, "lifecycle", "set", "/v2x_ros_driver_node", "activate",
                             ],
