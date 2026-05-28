@@ -20,16 +20,16 @@ The v2x-ros-driver is a ros2 package currently implemented in [ros2-humble](http
 
 Paramters can be set in config/params.yaml.
 
-`protocol` (string) - Selects the communication backend ("udp" or "mqtt"). Defaults to "udp".
-`v2x_radio_address` (string) - IP address of the V2X radio (used when protocol = "udp"). Defaults to "192.168.88.40".
-`v2x_radio_listening_port` (int) - Destination UDP port on the V2X radio for outbound messages (used when protocol = "udp"). Defaults to 1516.
-`listening_port` (int) - Local UDP port for receiving incoming messages (used when protocol = "udp"). Defaults to 5398.
-`broker_address` (string) - IP address or hostname of the MQTT broker (used when protocol = "mqtt"). Defaults to "167.20.208.79".
-`broker_port` (int) - Port number of the MQTT broker (used when protocol = "mqtt"). Defaults to 1883.
-`client_id` (string) - Identifier for the MQTT client connection (used when protocol = "mqtt"). Defaults to "".
-`qos_default` (int) - Default MQTT Quality of Service (QoS) level (used when protocol = "mqtt"). Defaults to 0.
-`reconnect_interval_sec` (int) - Time in seconds before reconnecting to MQTT broker on connection loss (used when protocol = "mqtt"). Defaults to 5.
-`mqtt_topic_prefix` (string) - Prefix for MQTT topics (used when protocol = "mqtt"). Defaults to "Ettifos/V2X".
+`protocol` (string) - The communication backend to use. This should be one of "udp" or "mqtt". Defaults to "udp".
+`v2x_radio_address` (string) - The IP address that the V2X radio is on. Only used when protocol is "udp". Defaults to "192.168.88.40".
+`v2x_radio_listening_port` (int) - The port on which the V2X radio receives outbound messages. Only used when protocol is "udp". Defaults to 1516.
+`listening_port` (int) - The port on which to receive incoming messages from the V2X radio. Only used when protocol is "udp". Defaults to 5398.
+`broker_address` (string) - The IP address or hostname of the MQTT broker. Only used when protocol is "mqtt". Defaults to "167.20.208.79".
+`broker_port` (int) - The port on which to connect to the MQTT broker. Only used when protocol is "mqtt". Defaults to 1883.
+`client_id` (string) - The MQTT client ID to use for the connection. Only used when protocol is "mqtt". Defaults to "".
+`qos_default` (int) - The default Quality of Service level to use for MQTT. Only used when protocol is "mqtt". Defaults to 0.
+`reconnect_interval_sec` (int) - The time to wait, in seconds, before reconnecting to the MQTT broker after a disconnect. Only used when protocol is "mqtt". Defaults to 5.
+`mqtt_topic_prefix` (string) - The topic prefix to use for MQTT messages. Only used when protocol is "mqtt". Defaults to "Ettifos/V2X".
 
 ---
 
