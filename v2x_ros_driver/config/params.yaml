@@ -15,7 +15,7 @@ v2x_ros_driver_node:
     listening_port: 5398
 
     # ── MQTT parameters (used when protocol = "mqtt") ──
-    broker_address: "167.20.208.79"
+    broker_address: "192.168.88.40"
     broker_port: 1883
     client_id: ""
     qos_default: 0
