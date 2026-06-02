@@ -4,7 +4,7 @@
 | --- | --- | --- | --- |
 | [![CI](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/ci.yml) | [![Docker Build](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/docker.yml/badge.svg)](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/docker.yml) | [![Dockerhub Build](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/dockerhub.yml/badge.svg)](https://github.com/usdot-fhwa-stol/v2x-ros-driver/actions/workflows/dockerhub.yml) | [![SonarCloud Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=usdot-fhwa-stol_v2x-ros-driver&metric=alert_status)](https://sonarcloud.io/dashboard?id=usdot-fhwa-stol_v2x-ros-driver) |
 
-v2x-ros-driver is the driver for use with V2X radios and has been tested with the following OBUs: Cohda (MK5/MK6C/MK6), Commsignia, Kapsch, Ettifos. It provides the bidirectional communication between ROS and a connected V2X radio (both OBUs and RSUs) using [carma_driver_msgs/msg/ByteArray](https://github.com/usdot-fhwa-stol/carma-msgs/blob/develop/carma_driver_msgs/msg/ByteArray.msg) ROS messages carrying UPER-encoded V2X data.
+v2x-ros-driver is the driver for use with V2X radios and has been tested with the following OBUs: Cohda (MK5/MK6C/MK6), Commsignia, Kapsch, and Ettifos. It provides the bidirectional communication between ROS and a connected V2X radio (both OBUs and RSUs) using [carma_driver_msgs/msg/ByteArray](https://github.com/usdot-fhwa-stol/carma-msgs/blob/develop/carma_driver_msgs/msg/ByteArray.msg) ROS messages carrying UPER-encoded V2X data.
 
 For more information regarding the recommended setup/configuration for a Cohda MK6 OBU, please refer to this [documentation](/docs/).
 
@@ -22,7 +22,7 @@ The [carma-msgs repository](https://github.com/usdot-fhwa-stol/carma-msgs) conta
 
 ### CARMA Platform
 
-[CARMA Platform](https://github.com/usdot-fhwa-stol/carma-platform) is an FWHA run open source software that enables researches and engineers to develop and test their Cooperative Driving Automation (CDA) features on suffciently equipped vehicles. It is built on top of ROS and allows users to install custom plugins for tactical planning of vehicle behaviors and low-level motion planning. v2x-ros-driver was initially developed for CARMA Platform.
+[CARMA Platform](https://github.com/usdot-fhwa-stol/carma-platform) is an open-source software platform that enables researches and engineers to develop and test their Cooperative Driving Automation (CDA) features on suffciently equipped vehicles. It is built on top of ROS and allows users to install custom plugins for tactical planning of vehicle behaviors and low-level motion planning. v2x-ros-driver was initially developed for CARMA Platform.
 
 ### CDA 1Tenth
 
@@ -30,7 +30,7 @@ The [carma-msgs repository](https://github.com/usdot-fhwa-stol/carma-msgs) conta
 
 ### v2x-ros-emulator
 
-The [v2x-ros-emulator repository](https://github.com/usdot-fhwa-stol/v2x-emulator) enables Raspberry Pi’s to act as mock OBUs and RSUs for the CDA1tenth platform.
+The [v2x-ros-emulator repository](https://github.com/usdot-fhwa-stol/v2x-emulator) enables Raspberry Pi’s to act as mock OBUs and RSUs for the CDA 1Tenth platform.
 
 ## Contribution
 
