@@ -46,17 +46,17 @@ Parameters can be set in config/params.yaml.
 1. Pull the latest docker image for driver from dockerhub.
 
 ```sh
-docker pull usdotfhwastol/v2x-ros-driver:<latest-release-tag>
+docker pull usdotfhwastoldev/v2x-ros-driver:develop # or your desired release tag
 ```
 
 *Latest release tag can be obtained from github tags. Docker images are tagged with the same tag.*
 
-#### Note: Versions up to carma-system-4.5.0 (ros2-foxy supported) can all be found under [usdotfhwastol/carma-cohda-dsrc-driver<release-tag>](https://hub.docker.com/r/usdotfhwastol/carma-cohda-dsrc-driver)
+#### Note: Versions up to carma-system-4.5.0 (ros2-foxy supported) can all be found under [usdotfhwastoldev/carma-cohda-dsrc-driver<release-tag>](https://hub.docker.com/r/usdotfhwastol/carma-cohda-dsrc-driver)
 
 2. Run the Docker image.
 
 ```sh
-docker run -it --network host usdotfhwastol/v2x-ros-driver:<latest_release_tag_from_github>
+docker run -it --network host usdotfhwastoldev/v2x-ros-driver:develop
 ```
 
 ---
@@ -65,29 +65,37 @@ docker run -it --network host usdotfhwastol/v2x-ros-driver:<latest_release_tag_f
 
 #### Note: Assumption here is that user is building on a ros2 humble development environment
 
-1. Clone the repository into workspace.
+1. Create workspace and source directory, or enter it if it already exsists.
+
+```sh
+mkdir v2x_ws/src
+# and or
+cd v2x_ws/src
+```
+
+2. Clone the repository into workspace.
 
 ```sh
 git clone https://github.com/usdot-fhwa-stol/v2x-ros-driver.git
 ```
 
-2. Clone the dependencies into workspace.
+3. Clone the dependencies into workspace.
 
 ```sh
-chmod +x <path_to_workspace>/docker/checkout.bash
-./<path_to_workspace>/docker/checkout.bash -r <path_to_workspace> -b <latest_release_tag_from_github>
+chmod +x v2x-ros-driver/docker/checkout.bash
+./v2x-ros-driver/docker/checkout.bash -r v2x-ros-driver/ -b develop # or you desired release tag
 ```
 
-3. Build the package.
+4. Build the package.
 
 ```sh
 source /opt/ros/humble/setup.bash
 colcon build --packages-up-to v2x_ros_driver
 ```
 
-4. Launch the node.
+5. Launch the node.
 
 ```sh
-source <path_to_package_install_directory>/install/setup.bash
+source install/setup.bash
 ros2 launch v2x_ros_driver v2x_ros_driver.launch.py
 ```
