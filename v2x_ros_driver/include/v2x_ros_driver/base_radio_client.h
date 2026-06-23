@@ -91,7 +91,7 @@ public:
     boost::signals2::signal<void(const boost::system::error_code&)> onError;
 
     /** @brief Signaled when message received */
-    boost::signals2::signal<void(std::vector<uint8_t> const &, uint16_t id)> onMessageReceived;
+    boost::signals2::signal<void(const std::shared_ptr<const std::vector<uint8_t>> &data, size_t start_index, uint16_t id)> onMessageReceived;
 
     //  Shared validation
 
@@ -117,7 +117,7 @@ public:
      * @brief Final check to ensure a found BSM PSID (0x0020) is not actually
      * PSM DSRCmsgID 32 (0x0020).
      */
-    bool isValidMsgAssumingBSMPSID(const std::shared_ptr<std::vector<uint8_t>> &data), size_t start_index);
+    bool isValidMsgAssumingBSMPSID(const std::shared_ptr<const std::vector<uint8_t>> &data, size_t start_index);
 
     /**
      * @brief Look up PSID string for a given decimal DSRCmsgID string.

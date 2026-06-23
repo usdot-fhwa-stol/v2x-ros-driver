@@ -30,7 +30,7 @@ inline uint16_t toMsgId(uint8_t byte1, uint8_t byte2){
     return (static_cast<uint16_t>(byte1) << 8) | static_cast<uint16_t>(byte2);
 }
 
-inline uint16_t msgLength(const std::shared_ptr<std::vector<uint8_t>> &data, size_t offset){
+inline uint16_t msgLength(const std::shared_ptr<const std::vector<uint8_t>> &data, size_t offset){
     return static_cast<uint16_t>(data->end() - (data->begin() + offset));
 }
 
@@ -50,7 +50,6 @@ bool BaseRadioClient::connect(const std::string &remote_address,
 
 void BaseRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &data)
 {
-    auto &entry = *data;
     auto data_size = data->size();
 
     if (data_size < short_frame_)
@@ -62,7 +61,7 @@ void BaseRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> 
     for (size_t i = 0; i < data_size-1; i++){
         // find the presumed beginning of the message frame by hitting one of the 
         // valid message id listed in config
-        auto msg_id = toMsgId(entry[i], entry[i + 1]);
+        auto msg_id = toMsgId(data->at(i), data->at(i + 1));
         if (!IsValidMsgID(std::to_string(msg_id))){
             continue;
         }
@@ -80,10 +79,10 @@ void BaseRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> 
         }
 
         bool shouldProcess = !isPossiblePSID(std::to_string(msg_id)) ||
-                             !isValidMsgAssumingBSMPSID(start_index, entry);
+                             !isValidMsgAssumingBSMPSID(data, start_index);
 
         if (shouldProcess) {
-            onMessageReceived(*(data+start_index), msg_id);
+            onMessageReceived(data, start_index, msg_id);
             break;
         } else {
             RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
@@ -99,7 +98,7 @@ bool BaseRadioClient::isValidMsgSize(const std::shared_ptr<const std::vector<uin
     // use explicit first 2 bits of the first byte to determine if it is short form, 
     // long form, or fragmented form (ignored for now).
 
-    if(msgLength(data, start_index)<1){return false};
+    if(msgLength(data, start_index)<1){return false;};
 
     uint8_t first_byte = data->at(0);
 
@@ -126,13 +125,13 @@ bool BaseRadioClient::isValidMsgSize(const std::shared_ptr<const std::vector<uin
         RCLCPP_DEBUG_STREAM(logger_, "Long form message encountered.");
     }
     else if ((first_byte >> 6)== 0b11){  // fragmented form, not supported
-        RCLCPP_WARN_STREAM(logger_, "Fragmented form encountered, discard for now.")
+        RCLCPP_WARN_STREAM(logger_, "Fragmented form encountered, discard for now.");
     }
     else {
         RCLCPP_DEBUG_STREAM(logger_, "Skipping unknow size encoding.");
     }
     
-    RCLCPP_DEBUG_STREAM(logger_, "Size match at index " << start_index <<": " << expected_size==actual_size << " | expected size: " << expected_size << " actual size: " << actual_size);
+    RCLCPP_DEBUG_STREAM(logger_, "Size match at index " << start_index <<": " << (expected_size==actual_size) << " | expected size: " << expected_size << " actual size: " << actual_size);
     
     return (actual_size>0) & (expected_size==actual_size);
 }
@@ -156,7 +155,7 @@ bool BaseRadioClient::isPossiblePSID(const std::string &msg_id)
     return false;
 }
 
-bool BaseRadioClient::isValidMsgAssumingBSMPSID(const std::shared_ptr<std::vector<uint8_t>> &data), size_t start_index)
+bool BaseRadioClient::isValidMsgAssumingBSMPSID(const std::shared_ptr<const std::vector<uint8_t>> &data, size_t start_index)
 {
     for (auto i = start_index; i < start_index + 6; i++)
     {
@@ -166,7 +165,7 @@ bool BaseRadioClient::isValidMsgAssumingBSMPSID(const std::shared_ptr<std::vecto
             auto element_id_index = i;
             for (auto j = element_id_index; j < element_id_index + 6; j++)
             {
-                auto possible_msg_id = toMsgId(data->at(j), data->at[j+1]);
+                auto possible_msg_id = toMsgId(data->at(j), data->at(j+1));
                 if (possible_msg_id == 20) return true; // BSM DSRCmsgID
             }
         }

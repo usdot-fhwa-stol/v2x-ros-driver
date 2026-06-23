@@ -179,7 +179,7 @@ carma_ros2_utils::CallbackReturn Node::handle_on_configure(const rclcpp_lifecycl
 
     // Wire up message received signal
     radio_client_->onMessageReceived.connect(
-        [this](std::vector<uint8_t> const &msg, uint16_t id) { onMessageReceivedHandler(msg, id); });
+        [this](const std::shared_ptr<const std::vector<uint8_t>> &data, size_t start_index, uint16_t id) { onMessageReceivedHandler(data, start_index, id); });
 
     sendMessageFromQueue();
 
@@ -190,7 +190,7 @@ carma_ros2_utils::CallbackReturn Node::handle_on_configure(const rclcpp_lifecycl
 //  Inbound message handler
 // ────────────────────────────────────────────────────────────────
 
-void Node::onMessageReceivedHandler(const std::vector<uint8_t> &data, uint16_t id) {
+void Node::onMessageReceivedHandler(const std::shared_ptr<const std::vector<uint8_t>> &data, size_t start_index, uint16_t id) {
     auto it = std::find_if(wave_cfg_items_.begin(), wave_cfg_items_.end(),
         [id](const WaveConfigStruct& entry) {
             return entry.dsrc_msg_id == std::to_string(id);
@@ -200,12 +200,12 @@ void Node::onMessageReceivedHandler(const std::vector<uint8_t> &data, uint16_t i
     msg.header.stamp = this->now();
     msg.header.frame_id = "";
     msg.message_type = it != wave_cfg_items_.end() ? it->name : "Unknown";
-    msg.content = data;
+    msg.content.assign(data->begin()+start_index, data->end());
     comms_pub_->publish(msg);
 
     RCLCPP_DEBUG_STREAM(this->get_logger(),
-        "Application received Data: " << data.size() << " bytes, message: "
-        << uint8_vector_to_hex_string(data));
+        "Application received Data: " << data->size() << " bytes, message: "
+        << uint8_vector_to_hex_string(*data));
 }
 
 // ────────────────────────────────────────────────────────────────

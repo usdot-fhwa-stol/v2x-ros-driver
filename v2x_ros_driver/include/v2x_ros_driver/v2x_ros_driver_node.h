@@ -144,7 +144,7 @@ private:
     /**
      * @brief Handles messages received from the radio client
      */
-    void onMessageReceivedHandler(const std::vector<uint8_t> &data, uint16_t id);
+    void onMessageReceivedHandler(const std::shared_ptr<const std::vector<uint8_t>> &data, size_t start_index, uint16_t id);
 
     /**
      * @brief Packs an outgoing message into WAVE text format (UDP only).
