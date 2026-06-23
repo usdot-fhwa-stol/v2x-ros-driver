@@ -1,5 +1,6 @@
 services:
   dev:
+    image: v2x-ros-driver:dev
     build:
       context: .
       dockerfile: Dockerfile
