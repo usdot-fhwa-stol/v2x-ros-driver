@@ -123,11 +123,15 @@ TEST(V2XRadioClient,testIsValidMsgSize)
     V2XDriverApplication::UdpRadioClient v2x_radio_client_;
     size_t start_index = 0;
 
-    // Case 1: Message vector too short (msg_vec.size() < 3)
+    // Case 1: Message vector too short (msg_vec.size() <= 3)
     {   
         std::initializer_list<uint8_t> entry = {0, 1}; // Only 2 bytes
-        auto data = std::make_shared<std::vector<uint8_t>>(entry);
+        auto data = std::make_shared<std::vector<uint8_t>>(entry.begin()+2, entry.end());
         ASSERT_FALSE(v2x_radio_client_.isValidMsgSize(data, start_index));
+
+        std::initializer_list<uint8_t> entry2 = {0, 1, 1}; // Only 3 bytes
+        auto data2 = std::make_shared<std::vector<uint8_t>>(entry2.begin()+2, entry2.end());
+        ASSERT_FALSE(v2x_radio_client_.isValidMsgSize(data2, start_index));
     }
 
     // Case 2: Short frame (msg_vec.size() < 128)
@@ -139,14 +143,14 @@ TEST(V2XRadioClient,testIsValidMsgSize)
         {0, 32, 59, 3, 128, 56, 0, 20, 53, 84, 110, 235, 28, 175, 212, 133, 230, 190, 195, 243, 28, 
             231, 55, 89, 11, 207, 4, 132, 128, 0, 112, 0, 128, 0, 253, 125, 55, 208, 0, 127, 255, 0, 
             0, 101, 144, 160, 0, 56, 192, 0, 255, 117, 63, 233, 47, 1, 255, 250, 255, 254, 200, 0};
-        auto valid_data = std::make_shared<std::vector<uint8_t>>(valid_entry);
+        auto valid_data = std::make_shared<std::vector<uint8_t>>(valid_entry.begin()+2, valid_entry.end());  // the isValidMsgSize function expects the ID (initial 2 bytes are stripped)
         ASSERT_TRUE(v2x_radio_client_.isValidMsgSize(valid_data, start_index));
 
         std::initializer_list<uint8_t> invalid_entry = 
         {1, 2, 32, 59, 3, 128, 56, 0, 20, 53, 84, 110, 235, 28, 175, 212, 133, 230, 190, 195, 243, 28, 
             231, 55, 89, 11, 207, 4, 132, 128, 0, 112, 0, 128, 0, 253, 125, 55, 208, 0, 127, 255, 0, 
             0, 101, 144, 160, 0, 56, 192, 0, 255, 117, 63, 233, 47, 1, 255, 250, 255, 254, 200, 0};
-        auto invalid_data = std::make_shared<std::vector<uint8_t>>(invalid_entry);
+        auto invalid_data = std::make_shared<std::vector<uint8_t>>(invalid_entry.begin()+2, invalid_entry.end());
         ASSERT_FALSE(v2x_radio_client_.isValidMsgSize(invalid_data, start_index));
     }
 
@@ -167,7 +171,7 @@ TEST(V2XRadioClient,testIsValidMsgSize)
             195, 59, 8, 104, 128, 114, 144, 0, 0, 0, 2, 53, 34, 195, 12, 223, 36, 36, 130, 12, 128, 0, 0, 0, 12, 205, 205, 240, 16, 207, 49, 224, 44, 26, 0, 2, 
             2, 137, 3, 217, 0, 0, 0, 0, 25, 172, 25, 132, 33, 165, 101, 209, 88, 60, 0, 4, 4, 44, 56, 128, 2, 2, 68, 4, 92, 128, 0, 0, 0, 25, 154, 30, 32, 33, 
             79, 98, 32};
-        auto valid_data = std::make_shared<std::vector<uint8_t>>(valid_entry);
+        auto valid_data = std::make_shared<std::vector<uint8_t>>(valid_entry.begin()+2, valid_entry.end());
         ASSERT_TRUE(v2x_radio_client_.isValidMsgSize(valid_data, start_index));
 
         std::initializer_list<uint8_t> invalid_entry =
@@ -183,7 +187,7 @@ TEST(V2XRadioClient,testIsValidMsgSize)
             195, 59, 8, 104, 128, 114, 144, 0, 0, 0, 2, 53, 34, 195, 12, 223, 36, 36, 130, 12, 128, 0, 0, 0, 12, 205, 205, 240, 16, 207, 49, 224, 44, 26, 0, 2, 
             2, 137, 3, 217, 0, 0, 0, 0, 25, 172, 25, 132, 33, 165, 101, 209, 88, 60, 0, 4, 4, 44, 56, 128, 2, 2, 68, 4, 92, 128, 0, 0, 0, 25, 154, 30, 32, 33, 
             79, 98, 32};
-        auto invalid_data = std::make_shared<std::vector<uint8_t>>(invalid_entry);
+        auto invalid_data = std::make_shared<std::vector<uint8_t>>(invalid_entry.begin()+2, invalid_entry.end());
         ASSERT_FALSE(v2x_radio_client_.isValidMsgSize(invalid_data, start_index));
     }
 }
