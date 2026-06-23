@@ -1,0 +1,20 @@
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+      args:
+        DOCKER_ORG: usdotfhwastoldev
+        DOCKER_TAG: develop-humble
+        GIT_BRANCH: develop
+    volumes:
+      - .:/home/carma/src/v2x-ros-driver
+      - claude-history:/home/carma/.claude
+      - vscode-server:/home/carma/.vscode-server
+    stdin_open: true
+    tty: true
+
+volumes:
+  claude-history:
+  vscode-server:

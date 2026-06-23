@@ -30,6 +30,12 @@ RUN ~/src/docker/checkout.bash -b ${GIT_BRANCH}
 RUN sudo apt-get update && sudo apt-get install -y libmosquitto-dev 
 RUN ~/src/docker/install.sh
 
+FROM setup AS dev
+
+RUN mkdir -p /home/carma/.vscode-server && chown carma:carma /home/carma/.vscode-server
+
+CMD ["sleep", "infinity"]
+
 # Final image
 FROM setup AS final
 
