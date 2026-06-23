@@ -26,6 +26,14 @@
 namespace V2XDriverApplication
 {
 
+inline uint16_t toMsgId(uint8_t byte1, uint8_t byte2){
+    return (static_cast<uint16_t>(byte1) << 8) | static_cast<uint16_t>(byte2);
+}
+
+inline uint16_t msgLength(const std::shared_ptr<std::vector<uint8_t>> &data, size_t offset){
+    return static_cast<uint16_t>(data->end() - (data->begin() + offset));
+}
+
 BaseRadioClient::BaseRadioClient() {}
 
 BaseRadioClient::~BaseRadioClient() {}
@@ -43,32 +51,31 @@ bool BaseRadioClient::connect(const std::string &remote_address,
 void BaseRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &data)
 {
     auto &entry = *data;
+    auto data_size = data->size();
 
-    if (entry.empty() || entry.size() < 3)
+    if (data_size < short_frame_)
     {
         RCLCPP_WARN_STREAM(logger_, "Received empty or insufficient data, nothing to process.");
         return;
     }
 
-    for (size_t i = 0; i < entry.size() - 3; i++)
-    {
-        auto msg_id = (static_cast<uint16_t>(entry[i]) << 8) | static_cast<uint16_t>(entry[i + 1]);
-        if (!IsValidMsgID(std::to_string(msg_id))) { continue; }
-
-        if ((i + short_frame_) >= entry.size()) {
-            break;
+    for (size_t i = 0; i < data_size-1; i++){
+        // find the presumed beginning of the message frame by hitting one of the 
+        // valid message id listed in config
+        auto msg_id = toMsgId(entry[i], entry[i + 1]);
+        if (!IsValidMsgID(std::to_string(msg_id))){
+            continue;
         }
 
-        auto start_index = i;
-        std::vector<uint8_t> msg_vec(entry.begin() + start_index, entry.end());
-
-        if (msg_vec.size() > 16383) { // lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length marker
+        auto start_index{i+2};  // skip the two bytes for frame id
+    
+        if (msgLength(data, start_index) > 16383) { // lengths greater than 16383 (0x3FFF) are encoded by splitting up the message into discrete chunks, each with its own length marker
             RCLCPP_WARN_STREAM(logger_, "BaseRadioClient::process() : discarding received message with length field longer than 16383.");
             break;
         }
 
-        if (!isValidMsgSize(msg_vec, start_index, entry)) {
-            RCLCPP_WARN_STREAM(logger_, "Size in possible MessageFrame does not match actual data size. Checking rest of data.");
+        if (!isValidMsgSize(data, start_index)) {
+            RCLCPP_WARN_STREAM(logger_, "Expected size of possible MessageFrame does not match actual data size. Checking next index.");
             continue;
         }
 
@@ -76,7 +83,7 @@ void BaseRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> 
                              !isValidMsgAssumingBSMPSID(start_index, entry);
 
         if (shouldProcess) {
-            onMessageReceived(msg_vec, msg_id);
+            onMessageReceived(*(data+start_index), msg_id);
             break;
         } else {
             RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
@@ -87,33 +94,47 @@ void BaseRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> 
 
 //  Message-size validation
 
-bool BaseRadioClient::isValidMsgSize(const std::vector<uint8_t> &msg_vec,
-                                     size_t start_index,
-                                     const std::vector<uint8_t> &entry)
+bool BaseRadioClient::isValidMsgSize(const std::shared_ptr<const std::vector<uint8_t>> &data, size_t start_index)
 {
-    // If message vector is 128 bytes or larger, length field will be 2 bytes
-    if (msg_vec.size() > 127)
-    {
-        auto tmp_start_index = start_index + long_frame_;
-        std::vector<uint8_t> long_vec(entry.begin() + tmp_start_index, entry.end());
+    // use explicit first 2 bits of the first byte to determine if it is short form, 
+    // long form, or fragmented form (ignored for now).
+
+    if(msgLength(data, start_index)<1){return false};
+
+    uint8_t first_byte = data->at(0);
+
+    uint16_t expected_size{0}, actual_size{0};
+
+    if ((first_byte >> 7)==0){  // first bit 0, short form
+        // skip the first byte before computing the length
+        expected_size = msgLength(data, start_index+1);
+        actual_size = first_byte;
+        RCLCPP_DEBUG_STREAM(logger_, "Short form message encountered.");
+    }
+    else if ((first_byte >> 6)== 0b10) // first 2 bits 10, long form
+    {   
         // Allows creation of msg_size from two bytes. e.g., [0 20 129 9 ...], we want to combine bytes 2 and 3 from this vector to create msg_size = 0x0109.
         // msg_vec[2] is hex value of 129 (0x81) and msg_vec[3] is hex value of 9 (0x09).
         // Per IEEE 1609.3, we will always have a value of "8" as the most significant value in the message size, if payload size > 128 bytes.
         // So, we bitwise AND (&) the value of msg_vec[2] with 0x7f (01111111) to drop the most significant bit, turning 0x81 (10000001) to 0x01 (00000001).
         // Because we need to merge two bytes, we cast the values to an unsigned 16-bit integer.
         // First byte is shifted to the left 8 bits (0x0001 is now 0x0100), followed by a bitwise OR (|) with msg_vec[3], combining 0x0100 and 0x0009 to create 0x0109.
-        auto msg_size = (static_cast<uint16_t>(msg_vec[2] & 0x7F) << 8) | msg_vec[3];
-        return (msg_size == long_vec.size());
+
+        actual_size = (static_cast<uint16_t>(data->at(start_index) & 0x7F) << 8) | data->at(start_index+1);
+        expected_size = msgLength(data, start_index+2);
+        
+        RCLCPP_DEBUG_STREAM(logger_, "Long form message encountered.");
     }
-    // If message vector is smaller than 128 bytes, length field will be 1 byte. Additional check to make sure msg_vec[2] exists.
-    else if (msg_vec.size() < 128 && msg_vec.size() >= 3)
-    {
-        auto tmp_start_index = start_index + short_frame_;
-        std::vector<uint8_t> short_vec(entry.begin() + tmp_start_index, entry.end());
-        auto msg_size = msg_vec[2];
-        return (msg_size == short_vec.size());
+    else if ((first_byte >> 6)== 0b11){  // fragmented form, not supported
+        RCLCPP_WARN_STREAM(logger_, "Fragmented form encountered, discard for now.")
     }
-    return false;
+    else {
+        RCLCPP_DEBUG_STREAM(logger_, "Skipping unknow size encoding.");
+    }
+    
+    RCLCPP_DEBUG_STREAM(logger_, "Size match at index " << start_index <<": " << expected_size==actual_size << " | expected size: " << expected_size << " actual size: " << actual_size);
+    
+    return (actual_size>0) & (expected_size==actual_size);
 }
 
 //  PSID / DSRCmsgID checks
@@ -135,18 +156,17 @@ bool BaseRadioClient::isPossiblePSID(const std::string &msg_id)
     return false;
 }
 
-bool BaseRadioClient::isValidMsgAssumingBSMPSID(size_t start_index,
-                                                 const std::vector<uint8_t> &entry)
+bool BaseRadioClient::isValidMsgAssumingBSMPSID(const std::shared_ptr<std::vector<uint8_t>> &data), size_t start_index)
 {
     for (auto i = start_index; i < start_index + 6; i++)
     {
-        auto element_id = (static_cast<uint16_t>(entry[i]) << 8) | static_cast<uint16_t>(entry[i+1]);
-        if (element_id == 896) // 0x0380
+        auto element_id = toMsgId(data->at(i), data->at(i+1));
+        if (element_id == 0x0380) // 0x0380
         {
             auto element_id_index = i;
             for (auto j = element_id_index; j < element_id_index + 6; j++)
             {
-                auto possible_msg_id = (static_cast<uint16_t>(entry[j]) << 8) | static_cast<uint16_t>(entry[j+1]);
+                auto possible_msg_id = toMsgId(data->at(j), data->at[j+1]);
                 if (possible_msg_id == 20) return true; // BSM DSRCmsgID
             }
         }

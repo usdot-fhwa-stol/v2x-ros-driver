@@ -105,8 +105,7 @@ public:
     void set_wave_file_path(const std::string &path);
 
     /** @brief Checks actual message vector size against size specified in MessageFrame */
-    bool isValidMsgSize(const std::vector<uint8_t> &msg_vec, size_t start_index,
-                        const std::vector<uint8_t> &entry);
+    bool isValidMsgSize(const std::shared_ptr<const std::vector<uint8_t>> &data,size_t start_index);
 
     /**
      * @brief Initial check for msg_id against PSID list to avoid treating a WSMP
@@ -118,7 +117,7 @@ public:
      * @brief Final check to ensure a found BSM PSID (0x0020) is not actually
      * PSM DSRCmsgID 32 (0x0020).
      */
-    bool isValidMsgAssumingBSMPSID(size_t start_index, const std::vector<uint8_t> &entry);
+    bool isValidMsgAssumingBSMPSID(const std::shared_ptr<std::vector<uint8_t>> &data), size_t start_index);
 
     /**
      * @brief Look up PSID string for a given decimal DSRCmsgID string.
