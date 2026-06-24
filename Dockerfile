@@ -34,6 +34,8 @@ FROM setup AS dev
 
 RUN mkdir -p /home/carma/.vscode-server && chown carma:carma /home/carma/.vscode-server
 
+RUN mkdir -p /home/carma/src/v2x_ros_driver/.vscode && chown carma:carma /home/carma/src/v2x_ros_driver/.vscode
+
 CMD ["sleep", "infinity"]
 
 # Final image
