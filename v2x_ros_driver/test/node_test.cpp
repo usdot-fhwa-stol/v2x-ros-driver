@@ -38,6 +38,10 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <unistd.h>
+#include "j2735_v2x_msgs/msg/byte_array.hpp"
+#include "carma_msgs/msg/system_alert.hpp"
+#include "carma_driver_msgs/srv/send_message.hpp"
+#include "std_srvs/srv/trigger.hpp"
 
 TEST(V2XRadioClient, testSocket)
 {
@@ -190,6 +194,69 @@ TEST(V2XRadioClient,testIsValidMsgSize)
         auto invalid_data = std::make_shared<std::vector<uint8_t>>(invalid_entry.begin()+2, invalid_entry.end());
         ASSERT_FALSE(v2x_radio_client_.isValidMsgSize(invalid_data, start_index));
     }
+}
+
+// Test-only subclass to expose the protected process() method for timing.
+class TestableUdpRadioClient : public V2XDriverApplication::UdpRadioClient
+{
+public:
+    using V2XDriverApplication::UdpRadioClient::process;
+};
+
+TEST(V2XRadioClient, testProcessTiming)
+{
+    TestableUdpRadioClient v2x_radio_client_;
+
+    // Load the wave config so message id 18 is recognized and the full
+    // process() path (validation + routing) is exercised.
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory("v2x_ros_driver");
+    v2x_radio_client_.set_wave_file_path(package_share_directory + "/etc/wave.json");
+
+    std::initializer_list<uint8_t> valid_entry =
+    {0, 18, 129, 145, 56, 0, 48, 0, 33, 136, 122, 1, 70, 103, 163, 112, 58, 131, 73, 205, 17, 244, 2, 220, 40, 32, 8, 36, 0, 0, 0, 0, 175, 147, 193, 130,
+        196, 187, 200, 128, 24, 144, 0, 0, 0, 2, 173, 110, 197, 11, 12, 237, 162, 0, 66, 64, 0, 0, 0, 10, 115, 185, 112, 43, 227, 205, 136, 0, 137, 0, 0, 0,
+        0, 40, 146, 224, 112, 175, 239, 42, 72, 43, 8, 0, 0, 0, 0, 145, 227, 50, 136, 210, 214, 115, 192, 176, 100, 0, 5, 15, 36, 20, 132, 0, 0, 0, 0, 70,
+        99, 142, 4, 103, 127, 90, 224, 88, 100, 0, 1, 7, 18, 9, 194, 0, 0, 0, 0, 34, 19, 192, 98, 51, 131, 174, 184, 44, 54, 0, 0, 131, 73, 4, 161, 0, 0, 0,
+        0, 16, 114, 93, 25, 25, 199, 215, 172, 86, 29, 0, 0, 65, 107, 17, 32, 0, 32, 194, 64, 82, 64, 0, 0, 0, 7, 139, 186, 40, 15, 197, 20, 31, 21, 136,
+        192, 0, 32, 10, 193, 8, 0, 16, 8, 64, 24, 200, 0, 0, 0, 1, 226, 238, 88, 195, 249, 125, 24, 68, 1, 204, 128, 0, 0, 0, 30, 53, 100, 16, 63, 168, 81,
+        0, 144, 33, 16, 0, 0, 0, 1, 117, 250, 202, 14, 101, 101, 23, 21, 130, 64, 0, 48, 26, 193, 200, 0, 24, 16, 144, 37, 16, 0, 0, 0, 1, 108, 234, 159,
+        142, 98, 37, 10, 5, 129, 192, 0, 48, 41, 32, 82, 32, 0, 0, 0, 2, 199, 196, 214, 28, 192, 202, 20, 11, 2, 128, 0, 96, 98, 64, 180, 64, 0, 0, 0, 3,
+        222, 195, 208, 230, 20, 80, 160, 88, 138, 0, 0, 131, 136, 6, 41, 0, 0, 0, 0, 37, 143, 54, 0, 205, 242, 26, 32, 26, 164, 0, 0, 0, 0, 144, 228, 199,
+        195, 59, 8, 104, 128, 114, 144, 0, 0, 0, 2, 53, 34, 195, 12, 223, 36, 36, 130, 12, 128, 0, 0, 0, 12, 205, 205, 240, 16, 207, 49, 224, 44, 26, 0, 2,
+        2, 137, 3, 217, 0, 0, 0, 0, 25, 172, 25, 132, 33, 165, 101, 209, 88, 60, 0, 4, 4, 44, 56, 128, 2, 2, 68, 4, 92, 128, 0, 0, 0, 25, 154, 30, 32, 33,
+        79, 98, 32};
+    auto data = std::make_shared<std::vector<uint8_t>>(valid_entry.begin(), valid_entry.end());
+
+    constexpr int kIterations = 1000;
+
+    // Warm-up (loads wave config / PSID lists lazily so it isn't counted in timing).
+    v2x_radio_client_.process(data);
+
+    auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < kIterations; ++i) {
+        v2x_radio_client_.process(data);
+    }
+    
+    auto end = std::chrono::steady_clock::now();
+
+    auto total_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    double avg_us = static_cast<double>(total_ns) / kIterations / 1000.0;
+
+    std::cout << "process() over " << kIterations << " iterations: "
+              << total_ns / 1e6 << " ms total, "
+              << avg_us << " us/call" << std::endl;
+
+    // simulate publishing
+    carma_driver_msgs::msg::ByteArray msg;
+    size_t start_ind = 2;  // simulate non zero start index
+    msg.content.assign(data->begin()+start_ind, data->end());
+
+    for(auto i=start_ind; i<data->size(); i++){
+        ASSERT_EQ(data->at(i), msg.content[i-start_ind]);
+    }
+    std::cout << "Successfully assigned to ByteArray msg." << std::endl;
+
+    SUCCEED();
 }
 
 // MqttRadioClient tests
