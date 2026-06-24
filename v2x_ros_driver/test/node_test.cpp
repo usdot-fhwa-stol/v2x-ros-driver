@@ -367,6 +367,51 @@ TEST(MqttRadioClient, testValidateMsgId)
     ASSERT_FALSE(client.IsValidMsgID("896")); // invalid
 }
 
+TEST(MqttRadioClient, testValidateMsgIdInt)
+{
+    V2XDriverApplication::MqttRadioClient client;
+
+    // No config loaded yet: integer fast path should report invalid, not crash.
+    ASSERT_FALSE(client.IsValidMsgID(static_cast<uint16_t>(20)));
+
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory("v2x_ros_driver");
+    client.set_wave_file_path(package_share_directory + "/etc/wave.json");
+
+    ASSERT_TRUE(client.IsValidMsgID(static_cast<uint16_t>(20)));   // BSM
+    ASSERT_TRUE(client.IsValidMsgID(static_cast<uint16_t>(18)));   // MAP
+    ASSERT_TRUE(client.IsValidMsgID(static_cast<uint16_t>(19)));   // SPaT
+    ASSERT_TRUE(client.IsValidMsgID(static_cast<uint16_t>(31)));   // TIM
+    ASSERT_TRUE(client.IsValidMsgID(static_cast<uint16_t>(243)));  // MobilityOperation
+    ASSERT_FALSE(client.IsValidMsgID(static_cast<uint16_t>(896))); // invalid
+
+    // Integer overload must agree with the string overload.
+    ASSERT_EQ(client.IsValidMsgID(static_cast<uint16_t>(20)), client.IsValidMsgID("20"));
+    ASSERT_EQ(client.IsValidMsgID(static_cast<uint16_t>(896)), client.IsValidMsgID("896"));
+}
+
+TEST(MqttRadioClient, testIsPossiblePsidInt)
+{
+    V2XDriverApplication::MqttRadioClient client;
+
+    // No config loaded yet: integer fast path should report false, not crash.
+    ASSERT_FALSE(client.isPossiblePSID(static_cast<uint16_t>(32)));
+
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory("v2x_ros_driver");
+    client.set_wave_file_path(package_share_directory + "/etc/wave.json");
+
+    // PSIDs are stored as their decimal value: 0x0020 -> 32, 0xBFEE -> 49134, 0x8003 -> 32771.
+    ASSERT_TRUE(client.isPossiblePSID(static_cast<uint16_t>(32)));     // BSM PSID 0x0020
+    ASSERT_TRUE(client.isPossiblePSID(static_cast<uint16_t>(49134)));  // MobilityOperation PSID 0xBFEE
+    ASSERT_TRUE(client.isPossiblePSID(static_cast<uint16_t>(32771)));  // TrafficControlMessage PSID 0x8003
+
+    // 20 is a valid DSRCmsgID but not a PSID decimal value.
+    ASSERT_FALSE(client.isPossiblePSID(static_cast<uint16_t>(20)));
+
+    // Integer overload must agree with the string overload.
+    ASSERT_EQ(client.isPossiblePSID(static_cast<uint16_t>(32)), client.isPossiblePSID("32"));
+    ASSERT_EQ(client.isPossiblePSID(static_cast<uint16_t>(20)), client.isPossiblePSID("20"));
+}
+
 TEST(MqttRadioClient, testPsidLookup)
 {
     V2XDriverApplication::MqttRadioClient client;
