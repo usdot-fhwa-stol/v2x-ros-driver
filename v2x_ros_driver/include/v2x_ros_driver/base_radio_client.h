@@ -23,6 +23,7 @@
 #include <thread>
 #include <vector>
 #include <string>
+#include <unordered_set>
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -98,6 +99,9 @@ public:
     /** @brief Validate possible DSRCmsgID against loaded wave config */
     bool IsValidMsgID(const std::string &msg_id);
 
+    /** @brief Integer fast-path overload of IsValidMsgID (no string formatting) */
+    bool IsValidMsgID(uint16_t msg_id);
+
     /** @brief Load list of valid dsrc_msg_ids and PSIDs from wave.json */
     void loadWaveConfigIds(const std::string &fileName);
 
@@ -112,6 +116,9 @@ public:
      * T-Header with valid PSID as a MessageFrame.
      */
     bool isPossiblePSID(const std::string &msg_id);
+
+    /** @brief Integer fast-path overload of isPossiblePSID (no string formatting) */
+    bool isPossiblePSID(uint16_t msg_id);
 
     /**
      * @brief Final check to ensure a found BSM PSID (0x0020) is not actually
@@ -137,6 +144,11 @@ protected:
 
     std::vector<std::string> wave_cfg_dsrc_msg_ids_;
     std::vector<std::string> wave_cfg_psids_;
+
+    /** @brief Integer caches built at config-load time for O(1) hot-path lookups */
+    std::unordered_set<uint16_t> wave_cfg_dsrc_msg_id_set_;
+    std::unordered_set<int> wave_cfg_psid_decimal_set_;
+
     std::string wave_file_path;
 
     /** @brief Frame overhead for payloads > 127 bytes (2-byte length + 2-byte DSRCmsgID) */
