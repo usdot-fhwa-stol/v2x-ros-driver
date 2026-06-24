@@ -83,6 +83,7 @@ void BaseRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> 
 
         if (shouldProcess) {
             onMessageReceived(data, start_index, msg_id);
+            RCLCPP_DEBUG_STREAM(logger_, "Received message id: " << msg_id);
             break;
         } else {
             RCLCPP_WARN_STREAM(logger_, "PSID found, parsing rest of data for MessageID.");
@@ -100,7 +101,7 @@ bool BaseRadioClient::isValidMsgSize(const std::shared_ptr<const std::vector<uin
 
     if(msgLength(data, start_index)<1){return false;};
 
-    uint8_t first_byte = data->at(0);
+    uint8_t first_byte = data->at(start_index);
 
     uint16_t expected_size{0}, actual_size{0};
 
