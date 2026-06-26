@@ -81,7 +81,6 @@ def generate_launch_description():
                     name='v2x_ros_driver_node',
                     extra_arguments=[
                         {'use_intra_process_comms': True},
-                        {'--log-level' : log_level }
                     ],
                     remappings=[
                         ("inbound_binary_msg", "comms/inbound_binary_msg"),
@@ -100,6 +99,7 @@ def generate_launch_description():
                     ]
             ),
         ],
+        arguments=["--ros-args", "--log-level", log_level],
         on_exit= Shutdown()
     )
     ros2_cmd = FindExecutable(name="ros2")
