@@ -4,7 +4,7 @@
 #   "udp"  — (default) existing UDP transport for Cohda/Commsignia/Kapsch OBUs
 #   "mqtt" — MQTT transport for Ettifos OBUs
 #
-v2x_ros_driver_node:
+/**/v2x_ros_driver_node:
   ros__parameters:
     # ── Protocol selection ──
     protocol: "udp"
