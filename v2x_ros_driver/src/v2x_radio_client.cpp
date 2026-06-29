@@ -39,6 +39,7 @@
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/schema.h>
+#include <algorithm>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -46,6 +47,76 @@
 #include "v2x_ros_driver/v2x_radio_client.h"
 namespace V2XDriverApplication
 {
+
+namespace
+{
+
+// Decode a COER length determinant at index i.
+// Short form (b < 0x80): the byte itself is the length.
+// Long form  (b & 0x7F): low 7 bits give the number of trailing length octets.
+// Returns false on overrun / unsupported width.
+bool coerLength(const std::vector<uint8_t> &buf, size_t i,
+                size_t &value, size_t &n_bytes)
+{
+    if (i >= buf.size()) { return false; }
+    uint8_t b = buf[i];
+    if (b < 0x80)
+    {
+        value = b;
+        n_bytes = 1;
+        return true;
+    }
+    size_t n = b & 0x7F;
+    if (n == 0 || n > sizeof(size_t) || i + 1 + n > buf.size()) { return false; }
+    size_t v = 0;
+    for (size_t k = 0; k < n; ++k) { v = (v << 8) | buf[i + 1 + k]; }
+    value = v;
+    n_bytes = 1 + n;
+    return true;
+}
+
+// Interpret buf[s:] as an IEEE 1609.2 Ieee1609Dot2Data and, if it ultimately
+// carries a J2735 MessageFrame as its unsecuredData, return that MessageFrame.
+//
+//   03 80 <len> <MessageFrame>             content = unsecuredData  -> MessageFrame
+//   03 81 <hashId> <preamble> <data> ...   content = signedData     -> recurse into
+//                                                                       tbsData.payload.data
+//
+// All multi-byte fields are COER-encoded. Returns false for anything that does
+// not parse as the above, so non-1609.2 data is left untouched by the caller.
+bool extractIeee1609Dot2Payload(const std::vector<uint8_t> &buf, size_t s,
+                                std::vector<uint8_t> &out)
+{
+    if (s + 2 > buf.size() || buf[s] != 0x03) { return false; } // protocolVersion == 3
+    uint8_t content = buf[s + 1];
+
+    if (content == 0x80) // unsecuredData (Opaque) -> this is the MessageFrame
+    {
+        size_t len = 0, n = 0;
+        if (!coerLength(buf, s + 2, len, n)) { return false; }
+        size_t start = s + 2 + n;
+        if (len == 0 || start + len > buf.size()) { return false; }
+        out.assign(buf.begin() + start, buf.begin() + start + len);
+        return true;
+    }
+
+    if (content == 0x81) // signedData -> recurse into the signed payload's data field
+    {
+        // SignedData ::= SEQUENCE { hashId(1), tbsData, signer, signature }
+        // tbsData    ::= SEQUENCE { payload SignedDataPayload, headerInfo }
+        // SignedDataPayload preamble: the 'data' OPTIONAL is present when bit 0x40 is set.
+        size_t i = s + 2;
+        i += 1;                       // skip hashId enumeration (1 byte)
+        if (i >= buf.size()) { return false; }
+        uint8_t preamble = buf[i++];  // SignedDataPayload preamble byte
+        if (!(preamble & 0x40)) { return false; } // 'data' field absent -> no MessageFrame here
+        return extractIeee1609Dot2Payload(buf, i, out);
+    }
+
+    return false;
+}
+
+} // namespace
 
 V2XRadioClient::V2XRadioClient() :
     running_(false)
@@ -139,16 +210,63 @@ void V2XRadioClient::close() {
     onDisconnect();
 }
 
+// J3224 SDSM (and other) messages may arrive wrapped in an IEEE 1609.2 security
+// envelope. This recovers the bare J2735 MessageFrame from that envelope so the
+// existing validation in process() can handle it. Returns false (leaving 'out'
+// untouched) for data that is not 1609.2-wrapped, so un-wrapped traffic that
+// already worked is unaffected.
+bool V2XRadioClient::stripIeee1609Dot2Header(const std::vector<uint8_t> &in,
+                                             std::vector<uint8_t> &out)
+{
+    // The IEEE 1609.2 envelope may sit behind a transport/capture header whose
+    // length varies by source: the raw radio feed prepends only a few bytes of
+    // framing, but the Commsignia "capture" feed prepends ~48 bytes of metadata
+    // (record type, sequence, timestamps, interface info) before the message.
+    // So scan the whole datagram for the start of the SPDU rather than assuming
+    // a fixed offset or a small window. A successful strip requires both a
+    // well-formed envelope AND that the recovered MessageFrame begins with a
+    // configured DSRCmsgID; that guard keeps capture-metadata records, bare
+    // MessageFrames, and certificate/signature bytes from ever being
+    // misidentified and altered.
+    for (size_t s = 0; s + 3 < in.size(); ++s)
+    {
+        std::vector<uint8_t> frame;
+        if (!extractIeee1609Dot2Payload(in, s, frame)) { continue; }
+        if (frame.size() < 3) { continue; }
+
+        auto msg_id = (static_cast<uint16_t>(frame[0]) << 8) | static_cast<uint16_t>(frame[1]);
+        if (IsValidMsgID(std::to_string(msg_id)))
+        {
+            RCLCPP_DEBUG_STREAM(logger_, "V2XRadioClient::process() : IEEE 1609.2 security "
+                                         "header detected; stripped to inner MessageFrame ("
+                                         << frame.size() << " bytes).");
+            out = std::move(frame);
+            return true;
+        }
+    }
+    return false;
+}
+
 void V2XRadioClient::process(const std::shared_ptr<const std::vector<uint8_t>> &data)
 {
-    auto &entry = *data;
-
     // Check if data is empty or smaller than the minimum required bytes
-    if (entry.empty() || entry.size() < 3)
+    if (!data || data->size() < 3)
     {
         RCLCPP_WARN_STREAM(logger_, "Received empty or insufficient data, nothing to process.");
         return;
     }
+
+    // J3224 SDSM and other messages may arrive inside an IEEE 1609.2 security
+    // envelope (signed: header + certificate + signature). The validation below
+    // expects a bare J2735 MessageFrame, so a wrapped message would fail
+    // isValidMsgSize() -- the trailing certificate/signature bytes inflate the
+    // frame -- and be discarded. If a security header is present, strip it down
+    // to the inner MessageFrame first; if it is absent, 'entry' stays bound to
+    // the original buffer and the logic below is unchanged, so un-wrapped
+    // traffic is processed exactly as before.
+    std::vector<uint8_t> stripped;
+    const std::vector<uint8_t> &entry =
+        stripIeee1609Dot2Header(*data, stripped) ? stripped : *data;
 
     for (size_t i = 0; i < entry.size() - 3; i++)
     {   // Leave 3 bytes after (for lsb of id, length byte 1, and either message body or length byte 2)
