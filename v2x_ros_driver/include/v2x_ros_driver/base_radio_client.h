@@ -43,7 +43,7 @@ public:
     BaseRadioClient();
     virtual ~BaseRadioClient();
 
-    //  Abstract transport methods 
+    //  Abstract transport methods
 
     /**
      * @brief Connects the driver to the radio/broker
@@ -133,6 +133,12 @@ protected:
      * Subclasses call this from their receive callbacks.
      */
     virtual void process(const std::shared_ptr<const std::vector<uint8_t>> &data);
+
+    /**
+     * @brief Interpret buf[s:] as an IEEE 1609.2 Ieee1609Dot2Data and, if it ultimately
+     * carries a J2735 MessageFrame as its unsecuredData, return that MessageFrame.
+     */
+    bool stripIeee1609Dot2Header(const std::vector<uint8_t> &in, std::vector<uint8_t> &out);
 
     rclcpp::Logger logger_{rclcpp::get_logger("base_radio_client")};
 
