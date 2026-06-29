@@ -182,6 +182,7 @@ private:
     * @param data Incoming data to be processed.
     */
     void process(const std::shared_ptr<const std::vector<uint8_t>> &data);
+    bool stripIeee1609Dot2Header(const std::vector<uint8_t> &in, std::vector<uint8_t> &out);
 };
 
 }
