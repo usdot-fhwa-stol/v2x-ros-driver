@@ -19,7 +19,6 @@
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/schema.h>
-#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <iomanip>
@@ -114,14 +113,17 @@ bool BaseRadioClient::connect(const std::string &remote_address,
 bool BaseRadioClient::stripIeee1609Dot2Header(const std::vector<uint8_t> &in,
                                               std::vector<uint8_t> &out)
 {
-    // Radios prepend a few bytes of framing ahead of the IEEE 1609.2
-    // protocolVersion (0x03), so scan a short leading window for the start of
-    // the SPDU rather than assuming a fixed offset. A successful strip requires
-    // both a well-formed envelope AND that the recovered MessageFrame begins
-    // with a configured DSRCmsgID; this keeps already-bare MessageFrames (which
-    // are not 1609.2 envelopes) from ever being misidentified and altered.
-    const size_t search_limit = std::min<size_t>(in.size(), 32);
-    for (size_t s = 0; s + 3 < in.size() && s < search_limit; ++s)
+    // The IEEE 1609.2 envelope may sit behind a transport/capture header whose
+    // length varies by source: the raw radio feed prepends only a few bytes of
+    // framing, but the Commsignia "capture" feed prepends ~48 bytes of metadata
+    // (record type, sequence, timestamps, interface info) before the message.
+    // So scan the whole datagram for the start of the SPDU rather than assuming
+    // a fixed offset or a small window. A successful strip requires both a
+    // well-formed envelope AND that the recovered MessageFrame begins with a
+    // configured DSRCmsgID; that guard keeps capture-metadata records, bare
+    // MessageFrames, and certificate/signature bytes from ever being
+    // misidentified and altered.
+    for (size_t s = 0; s + 3 < in.size(); ++s)
     {
         std::vector<uint8_t> frame;
         if (!extractIeee1609Dot2Payload(in, s, frame)) { continue; }
