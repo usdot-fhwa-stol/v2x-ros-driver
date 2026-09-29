@@ -27,6 +27,7 @@ ENV ROS2_PACKAGES=${ROS2_PACKAGES}
 RUN mkdir ~/src
 COPY --chown=carma . /home/carma/src/
 RUN ~/src/docker/checkout.bash -b ${GIT_BRANCH}
+RUN sudo apt-get update && sudo apt-get install -y libmosquitto-dev 
 RUN ~/src/docker/install.sh
 
 # Final image
@@ -38,7 +39,7 @@ ARG VCS_REF="NULL"
 
 LABEL org.label-schema.schema-version="1.0"
 LABEL org.label-schema.name="v2x-ros-driver"
-LABEL org.label-schema.description="ROS driver for C-V2X and DSRC V2X radios"
+LABEL org.label-schema.description="ROS driver for C-V2X radios"
 LABEL org.label-schema.vendor="Leidos"
 LABEL org.label-schema.version=${VERSION}
 LABEL org.label-schema.url="https://highways.dot.gov/research/research-programs/operations/CARMA"
