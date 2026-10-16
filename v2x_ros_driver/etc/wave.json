@@ -71,14 +71,16 @@
   },
   {
     "name" : "TrafficControlRequest",
-    "psid" : "8003",
+    "imf_type" : "SensorDataSharingMessage",
+    "psid" : "BFEE",
     "dsrc_msg_id" : "244",
     "channel" : "183",
     "priority" : "6"
   },
   {
     "name" : "TrafficControlMessage",
-    "psid" : "8003",
+    "imf_type" : "SensorDataSharingMessage",
+    "psid" : "BFEE",
     "dsrc_msg_id" : "245",
     "channel" : "183",
     "priority" : "6"

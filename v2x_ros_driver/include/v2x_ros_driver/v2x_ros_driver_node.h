@@ -83,6 +83,8 @@ private:
     struct WaveConfigStruct
     {
         std::string name, psid, dsrc_msg_id, channel, priority;
+        // Optional override for the IMF "Type=" field; falls back to name when empty
+        std::string imf_type;
 
         WaveConfigStruct(){};
         WaveConfigStruct(const std::string &name,

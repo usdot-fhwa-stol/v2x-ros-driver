@@ -236,7 +236,7 @@ std::vector<uint8_t> Node::packMessage(carma_driver_msgs::msg::ByteArray message
     }
 
     ss << "Version=0.7" << std::endl;
-    ss << "Type=" << cfg.name << std::endl;
+    ss << "Type=" << (cfg.imf_type.empty() ? cfg.name : cfg.imf_type) << std::endl;
     ss << "PSID=" << cfg.psid << std::endl;
     ss << "Priority=" << cfg.priority << std::endl;
     ss << "TxMode=ALT" << std::endl;
@@ -481,6 +481,10 @@ void Node::loadWaveConfig(const std::string &fileName)
         "      \"priority\": {\n"
         "        \"description\": \"WSM Priotiy to use assigned to message type in decimal\",\n"
         "        \"type\":\"string\"\n"
+        "      },\n"
+        "      \"imf_type\": {\n"
+        "        \"description\": \"optional Type= value sent to the radio instead of name\",\n"
+        "        \"type\":\"string\"\n"
         "      }\n"
         "    },\n"
         "    \"required\":[\"name\",\"psid\",\"dsrc_msg_id\",\"channel\",\"priority\"]"
@@ -530,6 +534,10 @@ void Node::loadWaveConfig(const std::string &fileName)
                                      entry["dsrc_msg_id"].GetString(),
                                      entry["channel"].GetString(),
                                      entry["priority"].GetString());
+        if (entry.HasMember("imf_type"))
+        {
+            wave_cfg_items_.back().imf_type = entry["imf_type"].GetString();
+        }
     }
 }
 
